@@ -18,7 +18,7 @@ import sys
 from apps.api.alerts import notify_saved_searches, run_active_saved_searches
 from apps.api.config import get_settings
 from apps.api.database import create_all, get_session_factory
-from apps.worker.pipeline import RunStats, run_collectors
+from apps.worker.pipeline import RunStats, run_collector
 from collectors.base import SearchParams
 from collectors.registry import KNOWN_COLLECTORS, build_collectors
 
@@ -47,20 +47,32 @@ def _make_params(args: argparse.Namespace) -> SearchParams:
 
 
 async def _run(args: argparse.Namespace) -> list[RunStats]:
+    from apps.worker.tasks import expand_collector_specs, params_from_dict
+
     settings = get_settings()
     names = None if getattr(args, "all", False) else (args.source or None)
-    collectors = build_collectors(settings, names)
-    if not collectors:
+    collector_map = {c.name: c for c in build_collectors(settings, names)}
+    if not collector_map:
         logger.warning(
             "No collectors available. Enable one via env flags "
             "(ENABLE_ATS/USAJOBS/JOBSPY/SEEK) and check --source names. Known: %s",
             ", ".join(KNOWN_COLLECTORS),
         )
         return []
-    params = _make_params(args)
-    logger.info("running collectors: %s", ", ".join(c.name for c in collectors))
+    specs = [
+        (name, spec)
+        for name, spec in expand_collector_specs(
+            settings, _make_params_dict(args), only_names=list(collector_map)
+        )
+    ]
+    logger.info("running %s collection task(s)", len(specs))
     session_factory = get_session_factory()
-    per_source, total = await run_collectors(collectors, params, session_factory)
+    per_source: list[RunStats] = []
+    total = RunStats(source="total")
+    for name, spec in specs:
+        stats = await run_collector(collector_map[name], params_from_dict(spec), session_factory)
+        per_source.append(stats)
+        total.merge(stats)
     for stats in per_source:
         logger.info("  %s: %s", stats.source, stats.as_dict())
     logger.info("TOTAL: %s", total.as_dict())

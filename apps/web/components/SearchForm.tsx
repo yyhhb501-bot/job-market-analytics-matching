@@ -158,10 +158,10 @@ export function SearchForm({ values }: { values: Record<string, string> }) {
       </div>
       <div className="field field-actions">
         <button type="submit" className="btn-primary">
-          Search
+          搜索
         </button>
         <a className="btn-ghost" href="/">
-          Reset
+          重置
         </a>
       </div>
     </form>

@@ -190,6 +190,13 @@ at 12:00** (`COLLECT_HOUR:COLLECT_MINUTE` in `TIMEZONE`, default
 `COLLECT_INTERVAL_MINUTES` instead. Request parameters come from
 `COLLECT_KEYWORDS` / `COLLECT_LOCATION` / `COLLECT_COUNTRY` / `COLLECT_RESULTS`.
 
+ATS sources are full-board snapshots (no keyword needed). Keyword sources
+(JobSpy Indeed/Google, Adzuna) run **once per comma-separated keyword**, and
+JobSpy/Adzuna also per country in `COLLECT_COUNTRY`, so
+`COLLECT_KEYWORDS="nurse,teacher,driver,accountant"` with `COLLECT_COUNTRY=US,AU`
+covers many occupations in both countries. `COLLECT_SITES` selects the JobSpy
+sites (e.g. `indeed,google`).
+
 The APScheduler fallback (`python -m apps.worker.main schedule`) follows the
 same settings; `--interval-minutes N` forces interval mode.
 

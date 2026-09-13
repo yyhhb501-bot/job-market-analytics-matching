@@ -70,6 +70,8 @@ class Settings(BaseSettings):
     collect_location: str | None = None
     collect_country: str | None = None
     collect_results: int = 100
+    # JobSpy sites used by keyword search (comma-separated).
+    collect_sites: str = "indeed,google"
 
     # FX: rates are "value of 1 unit in the base currency" (USD by default).
     fx_base_currency: str = "USD"

@@ -72,6 +72,29 @@ def test_evaluate_alerts_sync_sends_email(session_factory, session, monkeypatch)
     assert captured == [("AU jobs", "me@example.com", 1)]
 
 
+def test_expand_collector_specs_multi_keyword(monkeypatch):
+    from apps.api.config import Settings
+    from apps.worker import tasks
+
+    monkeypatch.setattr(
+        tasks, "enabled_source_names", lambda settings: ["greenhouse", "jobspy"]
+    )
+    settings = Settings(
+        enable_ats=True,
+        enable_jobspy=True,
+        collect_keywords="nurse,teacher",
+        collect_country="US,AU",
+    )
+    specs = tasks.expand_collector_specs(settings)
+    names = [name for name, _ in specs]
+    assert names.count("greenhouse") == 1
+    assert names.count("jobspy") == 4  # 2 keywords x 2 countries
+    jobspy_keywords = sorted(
+        spec["keywords"] for name, spec in specs if name == "jobspy"
+    )
+    assert jobspy_keywords == ["nurse", "nurse", "teacher", "teacher"]
+
+
 def test_celery_tasks_registered():
     from apps.worker.celery_app import celery_app
 

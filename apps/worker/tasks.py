@@ -42,13 +42,57 @@ def params_from_dict(data: dict | None) -> SearchParams:
     )
 
 
+SEARCH_SOURCES = {"jobspy", "seek", "adzuna", "usajobs"}
+COUNTRY_SOURCES = {"jobspy", "adzuna"}
+
+
 def default_params(settings: Settings) -> dict:
     return {
         "keywords": settings.collect_keywords,
         "location": settings.collect_location,
         "country": settings.collect_country,
         "results_wanted": settings.collect_results,
+        "extra": {
+            "sites": [site.strip() for site in settings.collect_sites.split(",") if site.strip()]
+        },
     }
+
+
+def expand_collector_specs(
+    settings: Settings, params: dict | None = None, only_names: list[str] | None = None
+) -> list[tuple[str, dict]]:
+    """Expand one run into per-source specs.
+
+    Full-board ATS sources run once. Keyword search sources (JobSpy/Adzuna/...)
+    run once per comma-separated keyword, and per country for JobSpy/Adzuna, so
+    ``COLLECT_KEYWORDS="nurse,teacher,driver"`` covers many occupations.
+    """
+    base = params or default_params(settings)
+    names = list(only_names) if only_names else enabled_source_names(settings)
+    search = [name for name in names if name in SEARCH_SOURCES]
+    rest = [name for name in names if name not in SEARCH_SOURCES]
+
+    specs: list[tuple[str, dict]] = [(name, base) for name in rest]
+    keywords = [k.strip() for k in str(base.get("keywords") or "").split(",") if k.strip()]
+    if not keywords:
+        specs += [(name, base) for name in search]
+        return specs
+
+    for name in search:
+        if name in COUNTRY_SOURCES:
+            countries = [
+                c.strip() for c in str(base.get("country") or "").split(",") if c.strip()
+            ] or settings.country_list or [None]
+        else:
+            countries = [None]
+        for keyword in keywords:
+            for country in countries:
+                spec = dict(base)
+                spec["keywords"] = keyword
+                if country:
+                    spec["country"] = country
+                specs.append((name, spec))
+    return specs
 
 
 def enabled_source_names(settings: Settings | None = None) -> list[str]:
@@ -245,15 +289,18 @@ def generate_summaries(batch_size: int = 50) -> dict:
 @celery_app.task(name="jobagg.collect_all")
 def collect_all(params: dict | None = None) -> dict:
     settings = get_settings()
-    params = params or default_params(settings)
-    names = enabled_source_names(settings)
-    if not names:
+    specs = expand_collector_specs(settings, params)
+    if not specs:
         logger.warning("collect_all: no collectors enabled")
         return {"sources": [], "dispatched": 0}
 
-    header = [collect_source.s(name, params) for name in names]
+    header = [collect_source.s(name, spec) for name, spec in specs]
     result = chord(header)(evaluate_alerts.s(lookback_hours=24))
-    return {"sources": names, "dispatched": len(names), "chord_id": getattr(result, "id", None)}
+    return {
+        "sources": sorted({name for name, _ in specs}),
+        "dispatched": len(specs),
+        "chord_id": getattr(result, "id", None),
+    }
 
 
 __all__ = [
@@ -263,6 +310,7 @@ __all__ = [
     "daily_digest",
     "default_params",
     "enabled_source_names",
+    "expand_collector_specs",
     "enrich_jobs",
     "enrich_jobs_sync",
     "evaluate_alerts",
