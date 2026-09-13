@@ -32,8 +32,8 @@ celery_app.conf.update(
     task_serializer="json",
     result_serializer="json",
     accept_content=["json"],
-    timezone="UTC",
-    enable_utc=True,
+    timezone=settings.timezone,
+    enable_utc=False,
     task_acks_late=True,
     task_reject_on_worker_lost=True,
     worker_prefetch_multiplier=1,
@@ -41,27 +41,37 @@ celery_app.conf.update(
     result_expires=3600,
     broker_connection_retry_on_startup=True,
     task_default_retry_delay=60,
-    beat_schedule={
-        "collect-and-alert": {
-            "task": "jobagg.collect_all",
-            "schedule": timedelta(minutes=settings.collect_interval_minutes),
-        },
-        "daily-digest": {
-            "task": "jobagg.daily_digest",
-            "schedule": crontab(minute=0, hour=settings.digest_hour_utc),
-        },
-        "daily-sweep": {
-            "task": "jobagg.sweep_stale",
-            "schedule": crontab(minute=30, hour=settings.digest_hour_utc),
-        },
-    },
 )
+
+beat_schedule: dict = {}
+if str(settings.collect_schedule).lower() == "interval":
+    beat_schedule["collect-and-alert"] = {
+        "task": "jobagg.collect_all",
+        "schedule": timedelta(minutes=settings.collect_interval_minutes),
+    }
+else:
+    # Daily collection at a fixed local time (default 12:00 in TIMEZONE).
+    beat_schedule["daily-collect"] = {
+        "task": "jobagg.collect_all",
+        "schedule": crontab(minute=settings.collect_minute, hour=settings.collect_hour),
+    }
+
+beat_schedule["daily-digest"] = {
+    "task": "jobagg.daily_digest",
+    "schedule": crontab(minute=30, hour=settings.digest_hour_utc),
+}
+beat_schedule["daily-sweep"] = {
+    "task": "jobagg.sweep_stale",
+    "schedule": crontab(minute=0, hour=(settings.digest_hour_utc + 1) % 24),
+}
 
 # Keep the OpenSearch index fresh when that backend is enabled.
 if str(settings.search_backend).lower() == "opensearch":
-    celery_app.conf.beat_schedule["reindex"] = {
+    beat_schedule["reindex"] = {
         "task": "jobagg.reindex",
         "schedule": timedelta(minutes=30),
     }
+
+celery_app.conf.beat_schedule = beat_schedule
 
 __all__ = ["celery_app", "settings"]

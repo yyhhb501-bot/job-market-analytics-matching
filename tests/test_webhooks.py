@@ -78,9 +78,10 @@ def test_build_webhook_payload_dispatch():
     assert build_webhook_payload(settings, search, jobs)["event"] == "saved_search.matches"
 
 
-def test_beat_schedule_has_daily_digest_and_sweep():
+def test_beat_schedule_has_daily_jobs():
     from apps.worker.celery_app import celery_app
 
+    assert "daily-collect" in celery_app.conf.beat_schedule
     assert "daily-digest" in celery_app.conf.beat_schedule
     assert "daily-sweep" in celery_app.conf.beat_schedule
 

@@ -70,6 +70,9 @@ class BreezyCollector(BaseCollector):
             url = f"https://{company}.breezy.hr/p/{raw['friendly_id']}"
 
         employment = (raw.get("type") or {}).get("name") if isinstance(raw.get("type"), dict) else raw.get("type")
+        company_field = raw.get("company")
+        if isinstance(company_field, dict):
+            company_field = company_field.get("name")
 
         return NormalizedJob(
             source=self.name,
@@ -77,7 +80,7 @@ class BreezyCollector(BaseCollector):
             title=title,
             canonical_url=url,
             apply_url=url,
-            company=raw.get("company") or company.replace("-", " ").title(),
+            company=company_field or company.replace("-", " ").title(),
             description=trim(strip_html(raw.get("description"))),
             country=country_from_name(country) or infer_country(city),
             state=state,

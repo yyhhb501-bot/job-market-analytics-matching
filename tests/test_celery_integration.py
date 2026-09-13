@@ -30,6 +30,7 @@ def test_expected_tasks_registered():
 
 def test_beat_schedule_entries():
     schedule = celery_app.conf.beat_schedule
-    assert "collect-and-alert" in schedule
+    # Default schedule is daily collection at 12:00 local time.
+    assert "daily-collect" in schedule
     assert "daily-digest" in schedule
     assert "daily-sweep" in schedule

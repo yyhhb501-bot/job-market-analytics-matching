@@ -183,10 +183,15 @@ celery -A apps.worker.celery_app beat   --loglevel=info
 `jobagg.collect_all` fans out one `jobagg.collect_source` task per enabled
 collector in parallel, then a chord body runs `jobagg.evaluate_alerts` once the
 collection finishes (so alert emails go out after new jobs land). Individual
-source tasks retry up to 3 times. The beat schedule runs every
-`COLLECT_INTERVAL_MINUTES` using the default `COLLECT_KEYWORDS` /
-`COLLECT_LOCATION` / `COLLECT_COUNTRY` / `COLLECT_RESULTS`, plus a `daily-digest`
-entry at `DIGEST_HOUR_UTC` (via `jobagg.daily_digest`) for digest searches.
+source tasks retry up to 3 times. By default beat runs collection **once a day
+at 12:00** (`COLLECT_HOUR:COLLECT_MINUTE` in `TIMEZONE`, default
+`Asia/Shanghai`), plus a `daily-digest` entry (`jobagg.daily_digest`) and a
+`daily-sweep` entry shortly after. Set `COLLECT_SCHEDULE=interval` to run every
+`COLLECT_INTERVAL_MINUTES` instead. Request parameters come from
+`COLLECT_KEYWORDS` / `COLLECT_LOCATION` / `COLLECT_COUNTRY` / `COLLECT_RESULTS`.
+
+The APScheduler fallback (`python -m apps.worker.main schedule`) follows the
+same settings; `--interval-minutes N` forces interval mode.
 
 Which companies to poll for ATS sources lives in
 [`config/ats_companies.json`](config/ats_companies.json). Entries are usually a

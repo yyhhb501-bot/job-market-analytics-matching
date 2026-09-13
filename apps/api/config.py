@@ -59,6 +59,12 @@ class Settings(BaseSettings):
     # Task queue / scheduling
     celery_broker_url: str | None = None  # defaults to REDIS_URL when empty
     celery_result_backend: str | None = None  # defaults to REDIS_URL when empty
+    # Scheduling. `daily` runs once a day at COLLECT_HOUR:COLLECT_MINUTE in
+    # TIMEZONE; `interval` runs every COLLECT_INTERVAL_MINUTES.
+    timezone: str = "Asia/Shanghai"
+    collect_schedule: str = "daily"  # daily | interval
+    collect_hour: int = 12
+    collect_minute: int = 0
     collect_interval_minutes: int = 60
     collect_keywords: str | None = None
     collect_location: str | None = None
@@ -112,8 +118,9 @@ class Settings(BaseSettings):
     board_sweep_enabled: bool = True
     missing_run_threshold: int = 3
 
-    # Daily digest schedule (UTC hour) used by the Celery beat entry.
-    digest_hour_utc: int = 7
+    # Daily digest/sweep hour (in TIMEZONE), default right after the 12:00
+    # collection: digest at :30, sweep at the next hour.
+    digest_hour_utc: int = 12
 
     # LLM-generated summaries (falls back to the extractive summary).
     enable_llm_summaries: bool = False

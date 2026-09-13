@@ -104,6 +104,10 @@ def _cmd_collect(args: argparse.Namespace) -> int:
 
 def _cmd_schedule(args: argparse.Namespace) -> int:
     from apscheduler.schedulers.blocking import BlockingScheduler
+    from apscheduler.triggers.cron import CronTrigger
+    from apscheduler.triggers.interval import IntervalTrigger
+
+    settings = get_settings()
 
     def job() -> None:
         try:
@@ -116,9 +120,36 @@ def _cmd_schedule(args: argparse.Namespace) -> int:
             logger.exception("scheduled saved-search alert evaluation failed")
 
     create_all()
-    scheduler = BlockingScheduler(timezone="UTC")
-    scheduler.add_job(job, "interval", minutes=args.interval_minutes, next_run_time=None)
-    logger.info("scheduler started, every %s minutes (Ctrl+C to stop)", args.interval_minutes)
+    scheduler = BlockingScheduler(timezone=settings.timezone)
+
+    if args.interval_minutes is not None:
+        trigger = IntervalTrigger(minutes=args.interval_minutes, timezone=settings.timezone)
+        logger.info(
+            "scheduler started: every %s minutes (%s)", args.interval_minutes, settings.timezone
+        )
+    elif str(settings.collect_schedule).lower() == "interval":
+        trigger = IntervalTrigger(
+            minutes=settings.collect_interval_minutes, timezone=settings.timezone
+        )
+        logger.info(
+            "scheduler started: every %s minutes (%s)",
+            settings.collect_interval_minutes,
+            settings.timezone,
+        )
+    else:
+        trigger = CronTrigger(
+            hour=settings.collect_hour,
+            minute=settings.collect_minute,
+            timezone=settings.timezone,
+        )
+        logger.info(
+            "scheduler started: daily at %02d:%02d (%s)",
+            settings.collect_hour,
+            settings.collect_minute,
+            settings.timezone,
+        )
+
+    scheduler.add_job(job, trigger)
     job()
     try:
         scheduler.start()
@@ -315,7 +346,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     schedule = sub.add_parser("schedule", help="run collections on an interval")
     add_collect_args(schedule)
-    schedule.add_argument("--interval-minutes", type=int, default=60)
+    schedule.add_argument("--interval-minutes", type=int, default=None)
     schedule.add_argument("--lookback-hours", type=int, default=24)
     schedule.set_defaults(func=_cmd_schedule)
 
