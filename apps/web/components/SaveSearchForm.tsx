@@ -6,7 +6,7 @@ import { createSavedSearch, runSavedSearch, type SavedSearchInput } from "@/lib/
 
 function defaultName(values: Record<string, string>): string {
   const parts = [values.q, values.city, values.country].filter(Boolean);
-  return parts.length > 0 ? parts.join(" · ") : "All jobs";
+  return parts.length > 0 ? parts.join(" · ") : "全部职位";
 }
 
 function buildPayload(
@@ -59,10 +59,10 @@ export function SaveSearchForm({ values }: { values: Record<string, string> }) {
       );
       const created = await createSavedSearch(payload);
       const run = await runSavedSearch(created.id);
-      setMessage(`Saved “${created.name}” — ${run.new_matches} new match(es). See Alerts.`);
+      setMessage(`已保存“${created.name}” — ${run.new_matches} 个新匹配。可在“告警”页查看。`);
       setName("");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Failed to save search");
+      setError(cause instanceof Error ? cause.message : "保存失败");
     } finally {
       setBusy(false);
     }
@@ -71,16 +71,16 @@ export function SaveSearchForm({ values }: { values: Record<string, string> }) {
   return (
     <form className="save-search" onSubmit={onSubmit}>
       <div className="field field-grow">
-        <label htmlFor="saved-name">Save this search</label>
+        <label htmlFor="saved-name">保存此搜索</label>
         <input
           id="saved-name"
           value={name}
           onChange={(event) => setName(event.target.value)}
-          placeholder={`Name (default: ${defaultName(values)})`}
+          placeholder={`名称（默认：${defaultName(values)}）`}
         />
       </div>
       <div className="field field-grow">
-        <label htmlFor="saved-email">Alert email (optional)</label>
+        <label htmlFor="saved-email">告警邮箱（可选）</label>
         <input
           id="saved-email"
           type="email"
@@ -90,7 +90,7 @@ export function SaveSearchForm({ values }: { values: Record<string, string> }) {
         />
       </div>
       <div className="field field-grow">
-        <label htmlFor="saved-webhook">Webhook URL (optional)</label>
+        <label htmlFor="saved-webhook">Webhook 地址（可选）</label>
         <input
           id="saved-webhook"
           type="url"
@@ -100,7 +100,7 @@ export function SaveSearchForm({ values }: { values: Record<string, string> }) {
         />
       </div>
       <div className="field">
-        <label htmlFor="saved-webhook-kind">Webhook type</label>
+        <label htmlFor="saved-webhook-kind">Webhook 类型</label>
         <select
           id="saved-webhook-kind"
           value={webhookKind}
@@ -108,25 +108,25 @@ export function SaveSearchForm({ values }: { values: Record<string, string> }) {
             setWebhookKind(event.target.value as "generic" | "slack" | "teams")
           }
         >
-          <option value="generic">Generic JSON</option>
+          <option value="generic">通用 JSON</option>
           <option value="slack">Slack</option>
           <option value="teams">Microsoft Teams</option>
         </select>
       </div>
       <div className="field">
-        <label htmlFor="saved-frequency">Alerts</label>
+        <label htmlFor="saved-frequency">告警频率</label>
         <select
           id="saved-frequency"
           value={frequency}
           onChange={(event) => setFrequency(event.target.value as "immediate" | "digest")}
         >
-          <option value="immediate">Immediate</option>
-          <option value="digest">Daily digest</option>
+          <option value="immediate">即时</option>
+          <option value="digest">每日摘要</option>
         </select>
       </div>
       <div className="field field-actions">
         <button type="submit" className="btn-primary" disabled={busy}>
-          {busy ? "Saving…" : "Save search"}
+          {busy ? "保存中…" : "保存搜索"}
         </button>
       </div>
       {message ? <p className="form-message ok">{message}</p> : null}

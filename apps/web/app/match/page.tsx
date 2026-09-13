@@ -27,7 +27,7 @@ export default function MatchPage() {
         })
       );
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Matching failed");
+      setError(cause instanceof Error ? cause.message : "匹配失败");
     } finally {
       setBusy(false);
     }
@@ -36,45 +36,42 @@ export default function MatchPage() {
   return (
     <>
       <section className="hero">
-        <h1>Résumé match</h1>
-        <p>
-          Paste your résumé to score current openings by skill and keyword overlap. Scoring runs
-          locally and deterministically.
-        </p>
+        <h1>简历匹配</h1>
+        <p>粘贴简历，按技能与关键词重合度给现有职位打分。评分在本地确定性完成。</p>
       </section>
 
       <form className="match-form" onSubmit={onSubmit}>
         <div className="field">
-          <label htmlFor="country">Country</label>
+          <label htmlFor="country">国家</label>
           <select id="country" value={country} onChange={(e) => setCountry(e.target.value)}>
-            <option value="">Any</option>
-            <option value="US">United States</option>
-            <option value="AU">Australia</option>
+            <option value="">不限</option>
+            <option value="US">美国</option>
+            <option value="AU">澳大利亚</option>
           </select>
         </div>
         <div className="field">
-          <label htmlFor="remote">Workplace</label>
+          <label htmlFor="remote">工作方式</label>
           <select id="remote" value={remoteType} onChange={(e) => setRemoteType(e.target.value)}>
-            <option value="">Any</option>
-            <option value="remote">Remote</option>
-            <option value="hybrid">Hybrid</option>
-            <option value="onsite">On-site</option>
+            <option value="">不限</option>
+            <option value="remote">远程</option>
+            <option value="hybrid">混合</option>
+            <option value="onsite">现场</option>
           </select>
         </div>
         <div className="field field-wide">
-          <label htmlFor="resume">Your résumé</label>
+          <label htmlFor="resume">你的简历</label>
           <textarea
             id="resume"
             rows={8}
             value={resume}
             onChange={(e) => setResume(e.target.value)}
-            placeholder="Paste your résumé or a list of skills and experience…"
+            placeholder="粘贴简历，或列出你的技能与经历……"
             required
           />
         </div>
         <div className="field field-actions">
           <button type="submit" className="btn-primary" disabled={busy || resume.trim().length === 0}>
-            {busy ? "Matching…" : "Match jobs"}
+            {busy ? "匹配中…" : "开始匹配"}
           </button>
         </div>
         {error ? <p className="form-message error">{error}</p> : null}
@@ -83,14 +80,14 @@ export default function MatchPage() {
       {data ? (
         <div className="match-results">
           <h2>
-            {data.results.length} matches{" "}
+            {data.results.length} 个匹配{" "}
             <span className="engine">
-              ({data.engine}
-              {data.reranked ? " · reranked" : ""})
+              （引擎 {data.engine}
+              {data.reranked ? " · 已重排" : ""}）
             </span>
           </h2>
           {data.results.length === 0 ? (
-            <p className="empty small">No jobs available to match against yet.</p>
+            <p className="empty small">暂无可用于匹配的职位。</p>
           ) : (
             <ol className="match-list">
               {data.results.map((result) => {
@@ -103,12 +100,12 @@ export default function MatchPage() {
                         <Link href={`/jobs/${result.job.id}`}>{result.job.title}</Link>
                       </h3>
                       <p className="meta">
-                        {result.job.company ?? "Unknown company"} · {formatLocation(result.job)}
+                        {result.job.company ?? "未知公司"} · {formatLocation(result.job)}
                         {result.semantic_score != null
-                          ? ` · semantic ${result.semantic_score}`
+                          ? ` · 语义 ${result.semantic_score}`
                           : ""}
                         {result.rerank_score != null
-                          ? ` · rerank ${result.rerank_score}`
+                          ? ` · 重排 ${result.rerank_score}`
                           : ""}
                       </p>
                       {salary ? <p className="salary">{salary}</p> : null}

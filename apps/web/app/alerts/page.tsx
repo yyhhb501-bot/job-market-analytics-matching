@@ -8,7 +8,7 @@ import {
   type Job,
   type SavedSearch,
 } from "@/lib/api";
-import { formatDate } from "@/lib/format";
+import { formatDate, labelEmployment, labelRemote } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -18,11 +18,11 @@ function describe(search: SavedSearch): string {
     search.country,
     search.source,
     search.city,
-    search.remote_type,
-    search.employment_type,
+    labelRemote(search.remote_type) || null,
+    labelEmployment(search.employment_type) || null,
     search.min_salary ? `≥ ${search.min_salary}` : null,
   ].filter(Boolean) as string[];
-  return parts.length > 0 ? parts.join(" · ") : "All jobs";
+  return parts.length > 0 ? parts.join(" · ") : "全部职位";
 }
 
 export default async function AlertsPage() {
@@ -40,27 +40,23 @@ export default async function AlertsPage() {
     );
     matchesBySearch = map;
   } catch (cause) {
-    error = cause instanceof Error ? cause.message : "Failed to reach the API";
+    error = cause instanceof Error ? cause.message : "无法连接 API";
   }
 
   return (
     <>
       <section className="hero">
-        <h1>Saved searches &amp; alerts</h1>
-        <p>
-          Newly seen jobs that matched your saved searches. The worker refreshes these on every
-          collection run.
-        </p>
+        <h1>保存搜索与告警</h1>
+        <p>与你的保存搜索匹配的新职位。每次采集任务都会自动刷新。</p>
       </section>
 
       {error ? (
-        <div className="notice">Could not reach the API ({error}).</div>
+        <div className="notice">无法连接 API（{error}）。</div>
       ) : null}
 
       {searches.length === 0 ? (
         <p className="empty">
-          No saved searches yet. Run a search on the <Link href="/">home page</Link> and use
-          &ldquo;Save search&rdquo;.
+          还没有保存搜索。请在<Link href="/">首页</Link>搜索后使用“保存此搜索”。
         </p>
       ) : (
         <div className="alert-list">
@@ -72,29 +68,27 @@ export default async function AlertsPage() {
                   <div>
                     <h2>
                       {search.name}{" "}
-                      {!search.is_active ? <span className="tag muted">paused</span> : null}
+                      {!search.is_active ? <span className="tag muted">已暂停</span> : null}
                     </h2>
                     <p className="meta">{describe(search)}</p>
                     <p className="meta">
-                      {search.frequency === "digest" ? "Daily digest" : "Immediate alerts"}
+                      {search.frequency === "digest" ? "每日摘要" : "即时提醒"}
                       {search.notify_email ? ` · ${search.notify_email}` : ""}
                       {search.webhook_url
                         ? ` · ${search.webhook_kind} webhook ${search.webhook_url}`
                         : ""}
-                      {!search.notify_email && !search.webhook_url ? " · no delivery set" : ""}
+                      {!search.notify_email && !search.webhook_url ? " · 未设置推送方式" : ""}
                     </p>
                   </div>
                   <div className="alert-stats">
-                    <span>{search.last_match_count} on last run</span>
-                    <span>last run {formatDate(search.last_run_at) ?? "never"}</span>
-                    <span>
-                      last notified {formatDate(search.last_notified_at) ?? "never"}
-                    </span>
+                    <span>上次运行命中 {search.last_match_count} 个</span>
+                    <span>上次运行：{formatDate(search.last_run_at) ?? "从未"}</span>
+                    <span>上次通知：{formatDate(search.last_notified_at) ?? "从未"}</span>
                     <SavedSearchActions search={search} />
                   </div>
                 </div>
                 {matches.length === 0 ? (
-                  <p className="empty small">No matches recorded yet.</p>
+                  <p className="empty small">暂无匹配记录。</p>
                 ) : (
                   <div className="job-grid">
                     {matches.map((job) => (

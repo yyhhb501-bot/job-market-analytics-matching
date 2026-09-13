@@ -17,7 +17,7 @@ export function SavedSearchActions({ search }: { search: SavedSearch }) {
       setMessage(await action());
       router.refresh();
     } catch (cause) {
-      setMessage(cause instanceof Error ? cause.message : "Action failed");
+      setMessage(cause instanceof Error ? cause.message : "操作失败");
     } finally {
       setBusy(false);
     }
@@ -26,33 +26,33 @@ export function SavedSearchActions({ search }: { search: SavedSearch }) {
   const run = () =>
     withBusy(async () => {
       const result = await runSavedSearch(search.id);
-      return `${result.new_matches} new match(es)`;
+      return `新增 ${result.new_matches} 个匹配`;
     });
 
   const toggle = () =>
     withBusy(async () => {
       await updateSavedSearch(search.id, { is_active: !search.is_active });
-      return search.is_active ? "Paused" : "Resumed";
+      return search.is_active ? "已暂停" : "已恢复";
     });
 
   const remove = () => {
-    if (!window.confirm(`Delete saved search “${search.name}”?`)) return undefined;
+    if (!window.confirm(`确定删除保存搜索“${search.name}”？`)) return undefined;
     return withBusy(async () => {
       await deleteSavedSearch(search.id);
-      return "Deleted";
+      return "已删除";
     });
   };
 
   return (
     <div className="search-actions">
       <button type="button" className="btn-ghost small" onClick={run} disabled={busy}>
-        Run now
+        立即运行
       </button>
       <button type="button" className="btn-ghost small" onClick={toggle} disabled={busy}>
-        {search.is_active ? "Pause" : "Resume"}
+        {search.is_active ? "暂停" : "恢复"}
       </button>
       <button type="button" className="btn-danger small" onClick={remove} disabled={busy}>
-        Delete
+        删除
       </button>
       {message ? <span className="action-message">{message}</span> : null}
     </div>

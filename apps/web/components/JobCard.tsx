@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import type { Job } from "@/lib/api";
-import { formatDate, formatLocation, formatSalary, titleCase } from "@/lib/format";
+import { formatDate, formatLocation, formatSalary, labelEmployment, labelRemote } from "@/lib/format";
 
 export function JobCard({ job }: { job: Job }) {
   const salary = formatSalary(job);
@@ -16,15 +16,15 @@ export function JobCard({ job }: { job: Job }) {
         </h2>
         <span className="badge">{job.source}</span>
       </div>
-      <p className="company">{job.company ?? "Unknown company"}</p>
+      <p className="company">{job.company ?? "未知公司"}</p>
       <p className="meta">{formatLocation(job)}</p>
 
       <div className="tags">
-        {job.remote_type ? <span className="tag">{titleCase(job.remote_type)}</span> : null}
+        {job.remote_type ? <span className="tag">{labelRemote(job.remote_type)}</span> : null}
         {job.employment_type ? (
-          <span className="tag">{titleCase(job.employment_type)}</span>
+          <span className="tag">{labelEmployment(job.employment_type)}</span>
         ) : null}
-        {posted ? <span className="tag muted">Posted {posted}</span> : null}
+        {posted ? <span className="tag muted">发布于 {posted}</span> : null}
       </div>
 
       {salary ? <p className="salary">{salary}</p> : null}
@@ -43,7 +43,7 @@ export function JobCard({ job }: { job: Job }) {
 
       <div className="job-card-actions">
         <Link className="btn-link" href={`/jobs/${job.id}`}>
-          Details
+          查看详情
         </Link>
         {externalUrl ? (
           <a
@@ -52,7 +52,7 @@ export function JobCard({ job }: { job: Job }) {
             target="_blank"
             rel="noreferrer noopener"
           >
-            Apply
+            去申请
           </a>
         ) : null}
       </div>

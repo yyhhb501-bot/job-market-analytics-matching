@@ -26,16 +26,15 @@ export default async function UnsubscribePage({
 
   return (
     <section className="hero">
-      <h1>Unsubscribe</h1>
+      <h1>退订</h1>
       {status === "unsubscribed" ? (
         <p>
-          You have been unsubscribed from {name ? `“${name}”` : "this saved search"}.{" "}
-          <Link href="/alerts">Back to alerts</Link>
+          已退订{name ? `“${name}”` : "该保存搜索"}。 <Link href="/alerts">返回告警页</Link>
         </p>
       ) : status === "missing" ? (
-        <p className="notice">Missing unsubscribe token.</p>
+        <p className="notice">缺少退订令牌。</p>
       ) : (
-        <p className="notice">This unsubscribe link is invalid or has already been used.</p>
+        <p className="notice">该退订链接无效或已被使用。</p>
       )}
     </section>
   );

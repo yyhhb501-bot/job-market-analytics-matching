@@ -65,7 +65,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Sea
     data = jobsResult;
     stats = statsResult;
   } catch (cause) {
-    error = cause instanceof Error ? cause.message : "Failed to reach the API";
+    error = cause instanceof Error ? cause.message : "无法连接 API";
   }
 
   const totalPages = Math.max(1, Math.ceil(data.total / data.page_size));
@@ -78,13 +78,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<Sea
   return (
     <>
       <section className="hero">
-        <h1>Find jobs in the US and Australia</h1>
-        <p>
-          One search across public ATS boards, USAJOBS, SEEK, Indeed, Glassdoor and Adzuna.
-        </p>
+        <h1>在美国和澳大利亚找工作</h1>
+        <p>一站式搜索公开 ATS 职位板、USAJOBS、SEEK、Indeed、Glassdoor 与 Adzuna。</p>
         {stats ? (
           <p className="hero-stats">
-            {stats.total_jobs.toLocaleString()} jobs indexed
+            已收录 {stats.total_jobs.toLocaleString()} 个职位
             {countrySummary ? ` · ${countrySummary}` : ""}
           </p>
         ) : null}
@@ -95,29 +93,29 @@ export default async function Home({ searchParams }: { searchParams: Promise<Sea
 
       {error ? (
         <div className="notice">
-          Could not reach the API ({error}). Make sure the FastAPI service is running and
+          无法连接 API（{error}）。请确认 FastAPI 服务已启动，并且
           <code> API_BASE_URL </code>
-          points at it.
+          指向正确。
         </div>
       ) : null}
 
       <div className="results-head">
-        <h2>{data.total.toLocaleString()} results</h2>
+        <h2>{data.total.toLocaleString()} 个结果</h2>
         <div className="results-tools">
           <a className="btn-ghost small" href={exportUrl(query, "csv")}>
-            Export CSV
+            导出 CSV
           </a>
           <a className="btn-ghost small" href={exportUrl(query, "xlsx")}>
-            Export Excel
+            导出 Excel
           </a>
           <span>
-            Page {data.page} of {totalPages}
+            第 {data.page} / {totalPages} 页
           </span>
         </div>
       </div>
 
       {data.items.length === 0 ? (
-        <p className="empty">No jobs matched your search.</p>
+        <p className="empty">没有符合条件的职位。</p>
       ) : (
         <div className="job-grid">
           {data.items.map((job) => (
@@ -130,20 +128,20 @@ export default async function Home({ searchParams }: { searchParams: Promise<Sea
         <nav className="pagination">
           {data.page > 1 ? (
             <a className="btn-ghost" href={pageHref(resolved, data.page - 1)}>
-              Previous
+              上一页
             </a>
           ) : (
-            <span className="btn-ghost disabled">Previous</span>
+            <span className="btn-ghost disabled">上一页</span>
           )}
           <span className="pagination-status">
             {data.page} / {totalPages}
           </span>
           {data.page < totalPages ? (
             <a className="btn-ghost" href={pageHref(resolved, data.page + 1)}>
-              Next
+              下一页
             </a>
           ) : (
-            <span className="btn-ghost disabled">Next</span>
+            <span className="btn-ghost disabled">下一页</span>
           )}
         </nav>
       ) : null}

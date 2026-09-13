@@ -3,6 +3,17 @@ import { formatDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
+const STATUS_LABELS: Record<string, string> = {
+  success: "成功",
+  error: "失败",
+  running: "运行中",
+};
+
+function statusLabel(status: string | null | undefined): string {
+  if (!status) return "未知";
+  return STATUS_LABELS[status] ?? status;
+}
+
 export default async function StatusPage() {
   let runs: CollectorRun[] = [];
   let summary: RunsSummary | null = null;
@@ -11,17 +22,17 @@ export default async function StatusPage() {
   try {
     [runs, summary] = await Promise.all([getRuns(50), getRunsSummary()]);
   } catch (cause) {
-    error = cause instanceof Error ? cause.message : "Failed to reach the API";
+    error = cause instanceof Error ? cause.message : "无法连接 API";
   }
 
   return (
     <>
       <section className="hero">
-        <h1>Collector status</h1>
-        <p>Run history and per-source health for every enabled collector.</p>
+        <h1>采集运行状态</h1>
+        <p>每个已启用采集源的运行历史与健康情况。</p>
       </section>
 
-      {error ? <div className="notice">Could not reach the API ({error}).</div> : null}
+      {error ? <div className="notice">无法连接 API（{error}）。</div> : null}
 
       {summary && summary.sources.length > 0 ? (
         <div className="job-grid">
@@ -30,45 +41,45 @@ export default async function StatusPage() {
               <div className="job-card-head">
                 <h2>{row.source}</h2>
                 <span className={`badge ${row.last_status === "error" ? "badge-error" : ""}`}>
-                  {row.last_status ?? "unknown"}
+                  {statusLabel(row.last_status)}
                 </span>
               </div>
               <p className="meta">
-                {row.runs} runs · {row.successes} ok · {row.errors} errors
+                共 {row.runs} 次 · 成功 {row.successes} · 失败 {row.errors}
               </p>
               <p className="meta">
-                seen {row.jobs_seen} · inserted {row.jobs_inserted}
+                发现 {row.jobs_seen} · 新增 {row.jobs_inserted}
               </p>
-              <p className="meta">last run {formatDate(row.last_run_at) ?? "never"}</p>
+              <p className="meta">上次运行：{formatDate(row.last_run_at) ?? "从未"}</p>
             </div>
           ))}
         </div>
       ) : (
-        !error && <p className="empty">No collector runs recorded yet.</p>
+        !error && <p className="empty">暂无采集运行记录。</p>
       )}
 
       {runs.length > 0 ? (
         <>
-          <h2 className="section-title">Recent runs</h2>
+          <h2 className="section-title">最近运行</h2>
           <div className="table-wrap">
             <table className="runs-table">
               <thead>
                 <tr>
-                  <th>Source</th>
-                  <th>Status</th>
-                  <th>Seen</th>
-                  <th>Inserted</th>
-                  <th>Updated</th>
-                  <th>Dup</th>
-                  <th>Started</th>
-                  <th>Error</th>
+                  <th>来源</th>
+                  <th>状态</th>
+                  <th>发现</th>
+                  <th>新增</th>
+                  <th>更新</th>
+                  <th>重复</th>
+                  <th>开始时间</th>
+                  <th>错误</th>
                 </tr>
               </thead>
               <tbody>
                 {runs.map((run) => (
                   <tr key={run.id}>
                     <td>{run.source}</td>
-                    <td>{run.status}</td>
+                    <td>{statusLabel(run.status)}</td>
                     <td>{run.jobs_seen}</td>
                     <td>{run.jobs_inserted}</td>
                     <td>{run.jobs_updated}</td>
