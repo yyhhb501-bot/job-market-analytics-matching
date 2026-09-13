@@ -68,7 +68,11 @@ cross-source deduplication is mandatory and runs on every insert (see below).
 - Only job postings are stored. No candidate profiles or personal data.
 - Review each source's terms with legal counsel before commercial use.
 
-## Quick start (Docker)
+The stack is split into `compose.dev.yml` (hot reload, ports published) and
+`compose.prod.yml` (built images, no bind mounts, internal data services).
+`docker-compose.yml` just includes the dev file.
+
+## Quick start (Docker, development)
 
 ```bash
 cp .env.example .env          # adjust toggles / credentials
@@ -84,25 +88,42 @@ interval. To use the APScheduler fallback instead (no Redis needed), run
 - Web UI: http://localhost:3000
 - API docs: http://localhost:8000/docs · health: http://localhost:8000/health
 
-## Quick start (local)
+## Quick start (Docker, production)
+
+```bash
+cp .env.prod.example .env.prod     # set POSTGRES_PASSWORD, API_KEY, CORS_ORIGINS...
+docker compose -f compose.prod.yml up -d --build
+docker compose -f compose.prod.yml run --rm api alembic upgrade head
+```
+
+Only `api` (8000) and `web` (3000) are published; Postgres/Redis/OpenSearch
+stay on the internal network. Images run non-root and the frontend is a
+multi-stage `next start` build.
+
+## Quick start (local preview)
 
 ```bash
 python -m venv .venv
 .venv\Scripts\activate                    # Windows
 pip install -e ".[dev]"
 
-# point at a local Postgres (or any SQLAlchemy URL)
-set DATABASE_URL=postgresql+psycopg://jobuser:jobpass@localhost:5432/jobs
-alembic upgrade head
-
-uvicorn apps.api.main:app --reload
+# SQLite preview with sample data (no collectors, no Postgres needed)
+set DATABASE_URL=sqlite+pysqlite:///./.preview.db
+set AUTO_CREATE_TABLES=true
+python -m apps.worker.main seed-demo
+uvicorn apps.api.main:app --port 8010
 
 # frontend (separate terminal)
 cd apps/web
 npm install
-cp .env.example .env.local        # sets API_BASE_URL / NEXT_PUBLIC_API_BASE_URL
+set API_BASE_URL=http://127.0.0.1:8010
+set NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8010
 npm run dev                       # http://localhost:3000
 ```
+
+The browser never holds the API key: client writes go through the Next.js
+proxy route (`app/api/proxy/[...path]`), which attaches the server-only
+`API_KEY`. See [SECURITY.md](SECURITY.md).
 
 Run tests (no database required):
 
@@ -116,6 +137,9 @@ ruff check .
 ```bash
 # create tables without Alembic (dev convenience)
 python -m apps.worker.main init-db
+
+# insert sample jobs so the UI can be previewed without collecting
+python -m apps.worker.main seed-demo
 
 # public ATS boards are enabled by default (ENABLE_ATS=true)
 python -m apps.worker.main collect --source greenhouse --source lever
@@ -357,10 +381,18 @@ rate.
 ### Job lifecycle
 
 `is_active`, `last_seen_at`, `closed_at` and `inactive_reason` track liveness.
-Jobs not seen for `STALE_JOB_DAYS` are deactivated by the `sweep` task
-(`jobagg.sweep_stale`, also on the daily beat). Re-seeing a job clears
-`closed_at`/`inactive_reason` and reactivates it. Inactive jobs are excluded
-from search.
+Two complementary mechanisms:
+
+- **Per-board (accurate):** full-board ATS sources record `last_seen_run_id`.
+  After a *complete* successful board run (fewer results than the requested
+  cap, so the board was fully enumerated), jobs that did not appear get
+  `missing_runs += 1`; after `MISSING_RUN_THRESHOLD` consecutive misses they are
+  closed with `inactive_reason="missing"`. Keyword-search sources are excluded.
+- **Time-based (backstop):** jobs not seen for `STALE_JOB_DAYS` are deactivated
+  by the `sweep` task (`jobagg.sweep_stale`, also on the daily beat).
+
+Re-seeing a job clears `closed_at`/`inactive_reason` and reactivates it.
+Inactive jobs are excluded from search.
 
 ### Three-layer deduplication
 
@@ -455,8 +487,18 @@ HTTP timeout and the SEEK rate limit.
   baseline and store `embedding_provider/model/version/content_hash`.
 - Job-seeker workflow: saved/applied/hidden states, application Kanban, notes,
   reminders, skill-gap analysis.
-- Repo hygiene: split dev vs production compose (multi-stage web, non-root,
-  pinned digests, internal network), lock files, Git + CI (pytest, Ruff, Next
-  build, pip-audit, migration test), `LICENSE`.
+- Dependency/tooling: adopt a lock file (`uv.lock` or hashed pip-tools output),
+  add `pip-audit`/`npm audit` and image scanning to CI, pin image digests.
 - FX rates with source/timestamp, scheduled refresh and staleness handling.
 - LinkedIn as an optional, carefully-reviewed source (kept disabled by default).
+
+## Version control & CI
+
+Git is initialized with an initial commit, and GitHub Actions
+([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs:
+
+- `ruff check .` and `pytest -q` (Python 3.13)
+- `npm ci && npm run typecheck && npm run build` (Node 22)
+- an Alembic `upgrade → downgrade base → upgrade` migration test against PostgreSQL
+
+Dependabot is configured for pip, npm, GitHub Actions and Docker.
