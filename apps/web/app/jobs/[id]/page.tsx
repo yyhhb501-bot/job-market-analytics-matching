@@ -8,6 +8,7 @@ import {
   formatSalary,
   labelEmployment,
   labelRemote,
+  labelSource,
 } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -33,10 +34,14 @@ export default async function JobDetailPage({
 
       <div className="job-card-head">
         <h1>{job.title}</h1>
-        <span className="badge">{job.source}</span>
+        <span className="badge" title={`来源平台：${job.source}`}>
+          {labelSource(job.source)}
+        </span>
       </div>
       <p className="company">{job.company ?? "未知公司"}</p>
-      <p className="meta">{formatLocation(job)}</p>
+      <p className="meta">
+        {formatLocation(job)} · 来源平台：{labelSource(job.source)}
+      </p>
 
       <div className="tags">
         {job.remote_type ? <span className="tag">{labelRemote(job.remote_type)}</span> : null}
@@ -65,7 +70,7 @@ export default async function JobDetailPage({
           target="_blank"
           rel="noreferrer noopener"
         >
-          前往 {job.source} 申请
+          前往 {labelSource(job.source)} 申请
         </a>
       ) : null}
 
@@ -86,8 +91,10 @@ export default async function JobDetailPage({
       <h2 className="section-title">详情</h2>
       <dl className="facts">
         <div>
-          <dt>来源</dt>
-          <dd>{job.source}</dd>
+          <dt>来源平台</dt>
+          <dd>
+            {labelSource(job.source)}（{job.source}）
+          </dd>
         </div>
         <div>
           <dt>来源职位 ID</dt>

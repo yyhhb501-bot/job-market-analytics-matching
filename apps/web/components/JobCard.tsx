@@ -1,7 +1,14 @@
 import Link from "next/link";
 
 import type { Job } from "@/lib/api";
-import { formatDate, formatLocation, formatSalary, labelEmployment, labelRemote } from "@/lib/format";
+import {
+  formatDate,
+  formatLocation,
+  formatSalary,
+  labelEmployment,
+  labelRemote,
+  labelSource,
+} from "@/lib/format";
 
 export function JobCard({ job }: { job: Job }) {
   const salary = formatSalary(job);
@@ -14,10 +21,14 @@ export function JobCard({ job }: { job: Job }) {
         <h2>
           <Link href={`/jobs/${job.id}`}>{job.title}</Link>
         </h2>
-        <span className="badge">{job.source}</span>
+        <span className="badge" title={`来源平台：${job.source}`}>
+          {labelSource(job.source)}
+        </span>
       </div>
       <p className="company">{job.company ?? "未知公司"}</p>
-      <p className="meta">{formatLocation(job)}</p>
+      <p className="meta">
+        {formatLocation(job)} · 来源：{labelSource(job.source)}
+      </p>
 
       <div className="tags">
         {job.remote_type ? <span className="tag">{labelRemote(job.remote_type)}</span> : null}

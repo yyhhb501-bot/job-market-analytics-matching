@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
 import { matchResume, type MatchResponse } from "@/lib/api";
-import { formatLocation, formatSalary } from "@/lib/format";
+import { formatLocation, formatSalary, labelSource } from "@/lib/format";
 
 export default function MatchPage() {
   const [resume, setResume] = useState("");
@@ -100,7 +100,8 @@ export default function MatchPage() {
                         <Link href={`/jobs/${result.job.id}`}>{result.job.title}</Link>
                       </h3>
                       <p className="meta">
-                        {result.job.company ?? "未知公司"} · {formatLocation(result.job)}
+                        {result.job.company ?? "未知公司"} · {formatLocation(result.job)} · 来源：
+                        {labelSource(result.job.source)}
                         {result.semantic_score != null
                           ? ` · 语义 ${result.semantic_score}`
                           : ""}

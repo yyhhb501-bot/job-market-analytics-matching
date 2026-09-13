@@ -17,6 +17,33 @@ const REMOTE_LABELS: Record<string, string> = {
   unknown: "未知",
 };
 
+const SOURCE_LABELS: Record<string, string> = {
+  greenhouse: "Greenhouse",
+  lever: "Lever",
+  ashby: "Ashby",
+  workable: "Workable",
+  smartrecruiters: "SmartRecruiters",
+  recruitee: "Recruitee",
+  breezy: "Breezy HR",
+  workday: "Workday",
+  personio: "Personio",
+  teamtailor: "Teamtailor",
+  bamboohr: "BambooHR",
+  jazzhr: "JazzHR",
+  pinpoint: "Pinpoint",
+  rippling: "Rippling",
+  jobvite: "Jobvite",
+  usajobs: "USAJOBS（美国政府）",
+  adzuna: "Adzuna",
+  remoteok: "RemoteOK",
+  indeed: "Indeed",
+  glassdoor: "Glassdoor",
+  google: "Google 招聘",
+  seek: "SEEK（澳洲）",
+  linkedin: "LinkedIn",
+  ziprecruiter: "ZipRecruiter",
+};
+
 const EMPLOYMENT_LABELS: Record<string, string> = {
   full_time: "全职",
   part_time: "兼职",
@@ -56,6 +83,11 @@ export function formatDate(value: string | null | undefined): string | null {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
   return date.toLocaleDateString("zh-CN", { year: "numeric", month: "short", day: "numeric" });
+}
+
+export function labelSource(value: string | null | undefined): string {
+  if (!value) return "";
+  return SOURCE_LABELS[value] ?? value;
 }
 
 export function labelRemote(value: string | null | undefined): string {

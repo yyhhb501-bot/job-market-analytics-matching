@@ -108,6 +108,7 @@ services:
     volumes:
       - ./:/app
       - web_node_modules:/app/apps/web/node_modules
+      - web_next:/app/apps/web/.next
     depends_on:
       - api
 
@@ -115,3 +116,4 @@ volumes:
   pgdata:
   osdata:
   web_node_modules:
+  web_next:
