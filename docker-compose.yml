@@ -1,0 +1,4 @@
+# Default (development) stack. `docker compose up` uses this.
+# Production: docker compose -f compose.prod.yml up --build
+include:
+  - compose.dev.yml

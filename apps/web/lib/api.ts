@@ -1,0 +1,325 @@
+export type Job = {
+  id: number;
+  source: string;
+  source_job_id: string;
+  title: string;
+  company: string | null;
+  description: string | null;
+  canonical_url: string | null;
+  apply_url: string | null;
+  country: string | null;
+  state: string | null;
+  city: string | null;
+  remote_type: string | null;
+  employment_type: string | null;
+  salary_min: number | null;
+  salary_max: number | null;
+  salary_currency: string | null;
+  salary_period: string | null;
+  posted_at: string | null;
+  first_seen_at: string | null;
+  last_seen_at: string | null;
+  duplicate_of: number | null;
+  skills: string[] | null;
+  summary: string | null;
+  salary_display_min: number | null;
+  salary_display_max: number | null;
+  salary_display_currency: string | null;
+  salary_display_period: string | null;
+};
+
+export type JobSearchResponse = {
+  items: Job[];
+  total: number;
+  page: number;
+  page_size: number;
+};
+
+export type SourceInfo = {
+  known: string[];
+  ats: string[];
+  enabled: Record<string, boolean>;
+  counts: Record<string, number>;
+};
+
+export type Stats = {
+  total_jobs: number;
+  active_jobs: number;
+  by_source: { source: string; count: number }[];
+  by_country: { country: string | null; count: number }[];
+};
+
+export type SearchQuery = {
+  q?: string;
+  source?: string;
+  country?: string;
+  city?: string;
+  state?: string;
+  remote_type?: string;
+  employment_type?: string;
+  min_salary?: string;
+  currency?: string;
+  sort?: string;
+  order?: string;
+  page?: string;
+  page_size?: string;
+};
+
+function baseUrl(): string {
+  return (
+    process.env.API_BASE_URL ??
+    process.env.NEXT_PUBLIC_API_BASE_URL ??
+    "http://localhost:8000"
+  );
+}
+
+function authHeaders(): Record<string, string> {
+  // Server-only: the API key must never be bundled into browser JS.
+  const key = process.env.API_KEY;
+  return key ? { "X-API-Key": key } : {};
+}
+
+function toQuery(params: SearchQuery): string {
+  const search = new URLSearchParams();
+  const entries = Object.entries(params) as [string, unknown][];
+  for (const [key, value] of entries) {
+    if (value === undefined || value === null) continue;
+    const text = String(value).trim();
+    if (text !== "") search.set(key, text);
+  }
+  const serialized = search.toString();
+  return serialized ? `?${serialized}` : "";
+}
+
+async function getJson<T>(path: string): Promise<T> {
+  const response = await fetch(`${baseUrl()}${path}`, {
+    cache: "no-store",
+    headers: authHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error(`API request failed (${response.status}) for ${path}`);
+  }
+  return (await response.json()) as T;
+}
+
+export function searchJobs(query: SearchQuery): Promise<JobSearchResponse> {
+  return getJson<JobSearchResponse>(`/api/v1/jobs${toQuery(query)}`);
+}
+
+export async function getJob(id: number | string): Promise<Job | null> {
+  const response = await fetch(`${baseUrl()}/api/v1/jobs/${id}`, {
+    cache: "no-store",
+    headers: authHeaders(),
+  });
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    throw new Error(`API request failed (${response.status}) for /api/v1/jobs/${id}`);
+  }
+  return (await response.json()) as Job;
+}
+
+export function getSources(): Promise<SourceInfo> {
+  return getJson<SourceInfo>("/api/v1/sources");
+}
+
+export function getStats(): Promise<Stats> {
+  return getJson<Stats>("/api/v1/stats");
+}
+
+export type SavedSearch = {
+  id: number;
+  name: string;
+  keywords: string | null;
+  country: string | null;
+  source: string | null;
+  city: string | null;
+  state: string | null;
+  remote_type: string | null;
+  employment_type: string | null;
+  min_salary: number | null;
+  notify_email: string | null;
+  webhook_url: string | null;
+  webhook_kind: string;
+  frequency: string;
+  is_active: boolean;
+  last_run_at: string | null;
+  last_notified_at: string | null;
+  last_match_count: number;
+  created_at: string | null;
+};
+
+export type SavedSearchInput = {
+  name: string;
+  keywords?: string | null;
+  country?: string | null;
+  source?: string | null;
+  city?: string | null;
+  state?: string | null;
+  remote_type?: string | null;
+  employment_type?: string | null;
+  min_salary?: number | null;
+  notify_email?: string | null;
+  webhook_url?: string | null;
+  webhook_kind?: "generic" | "slack" | "teams";
+  frequency?: "immediate" | "digest";
+};
+
+export type CollectorRun = {
+  id: number;
+  source: string;
+  status: string;
+  params: Record<string, unknown> | null;
+  jobs_seen: number;
+  jobs_inserted: number;
+  jobs_updated: number;
+  jobs_duplicate: number;
+  error: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+};
+
+export type SourceRunSummary = {
+  source: string;
+  runs: number;
+  successes: number;
+  errors: number;
+  last_status: string | null;
+  last_run_at: string | null;
+  jobs_seen: number;
+  jobs_inserted: number;
+};
+
+export type RunsSummary = {
+  total_runs: number;
+  sources: SourceRunSummary[];
+};
+
+export type MatchResult = {
+  job: Job;
+  score: number;
+  matched_skills: string[];
+  missing_skills: string[];
+  shared_keywords: string[];
+  semantic_score: number | null;
+  rerank_score: number | null;
+};
+
+export type MatchResponse = {
+  engine: string;
+  reranked: boolean;
+  results: MatchResult[];
+};
+
+export type SavedSearchRunResult = {
+  saved_search_id: number;
+  new_matches: number;
+  total_matches: number;
+  items: Job[];
+};
+
+async function clientJson<T>(path: string, init?: RequestInit): Promise<T> {
+  // Browser requests hit the same-origin proxy route, which adds the API key
+  // server-side. `path` is always a `/api/proxy/...` URL.
+  const response = await fetch(path, {
+    cache: "no-store",
+    ...init,
+  });
+  if (!response.ok) {
+    throw new Error(`API request failed (${response.status}) for ${path}`);
+  }
+  return (await response.json()) as T;
+}
+
+export function createSavedSearch(payload: SavedSearchInput): Promise<SavedSearch> {
+  return clientJson<SavedSearch>("/api/proxy/saved-searches", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function runSavedSearch(id: number): Promise<SavedSearchRunResult> {
+  return clientJson<SavedSearchRunResult>(`/api/proxy/saved-searches/${id}/run`, {
+    method: "POST",
+  });
+}
+
+export function updateSavedSearch(
+  id: number,
+  payload: Partial<SavedSearchInput> & { is_active?: boolean }
+): Promise<SavedSearch> {
+  return clientJson<SavedSearch>(`/api/proxy/saved-searches/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteSavedSearch(id: number): Promise<void> {
+  const response = await fetch(`/api/proxy/saved-searches/${id}`, {
+    method: "DELETE",
+    cache: "no-store",
+  });
+  if (!response.ok && response.status !== 204) {
+    throw new Error(`API request failed (${response.status}) for /api/v1/saved-searches/${id}`);
+  }
+}
+
+export function listSavedSearches(): Promise<SavedSearch[]> {
+  return getJson<SavedSearch[]>("/api/v1/saved-searches");
+}
+
+export function getSavedSearchMatches(id: number, limit = 20): Promise<Job[]> {
+  return getJson<Job[]>(`/api/v1/saved-searches/${id}/matches?limit=${limit}`);
+}
+
+export function exportUrl(
+  query: SearchQuery,
+  format: "csv" | "json" | "xlsx" = "csv"
+): string {
+  const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+  const params = new URLSearchParams();
+  const merged: Record<string, unknown> = { ...query, format };
+  for (const [key, value] of Object.entries(merged)) {
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
+      params.set(key, String(value));
+    }
+  }
+  return `${base}/api/v1/jobs/export?${params.toString()}`;
+}
+
+export function getFxRates(): Promise<{ base: string; rates: Record<string, number> }> {
+  return getJson<{ base: string; rates: Record<string, number> }>("/api/v1/fx");
+}
+
+export function getRuns(limit = 50, source?: string): Promise<CollectorRun[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (source) params.set("source", source);
+  return getJson<CollectorRun[]>(`/api/v1/runs?${params.toString()}`);
+}
+
+export function getRunsSummary(): Promise<RunsSummary> {
+  return getJson<RunsSummary>("/api/v1/runs/summary");
+}
+
+export function matchResume(
+  resume: string,
+  options: { limit?: number; country?: string; remoteType?: string } = {}
+): Promise<MatchResponse> {
+  return clientJson<MatchResponse>("/api/proxy/match", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      resume,
+      limit: options.limit ?? 20,
+      country: options.country || null,
+      remote_type: options.remoteType || null,
+    }),
+  });
+}
+
+export function unsubscribeSavedSearch(token: string): Promise<{ status: string; name?: string }> {
+  return getJson<{ status: string; name?: string }>(
+    `/api/v1/saved-searches/unsubscribe?token=${encodeURIComponent(token)}`
+  );
+}

@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "job-aggregator"
+version = "0.1.0"
+description = "US + Australia job aggregation platform (collectors, dedup, search API)"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "sqlalchemy>=2.0.36",
+    "alembic>=1.14",
+    "psycopg[binary]>=3.2",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "httpx>=0.27",
+    "tenacity>=9.0",
+    "apscheduler>=3.10,<4",
+    "celery>=5.5",
+    "redis>=5.0",
+    "pandas>=2.2",
+    "openpyxl>=3.1",
+    "python-jobspy>=1.1.80",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "respx>=0.21",
+    "ruff>=0.7",
+]
+
+[project.scripts]
+jobagg = "apps.worker.main:main"
+
+[tool.setuptools]
+packages = { find = { include = ["apps*", "collectors*", "packages*"], exclude = ["tests*", "migrations*"] } }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP"]
+ignore = ["E501"]

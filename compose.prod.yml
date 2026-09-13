@@ -1,0 +1,132 @@
+# Production stack: built images, no bind mounts, no reload, internal-only data
+# services, non-root containers. Copy `.env.example` to `.env.prod` first and
+# set POSTGRES_PASSWORD, API_KEY, SECRET values, CORS_ORIGINS, etc.
+#
+#   docker compose -f compose.prod.yml up -d --build
+#
+# Data services are NOT published to the host; only api (8000) and web (3000).
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-jobuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+      POSTGRES_DB: ${POSTGRES_DB:-jobs}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [jobnet]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jobuser} -d ${POSTGRES_DB:-jobs}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    networks: [jobnet]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  opensearch:
+    image: opensearchproject/opensearch:2.17.1
+    environment:
+      discovery.type: single-node
+      plugins.security.disabled: "true"
+      OPENSEARCH_JAVA_OPTS: -Xms512m -Xmx512m
+    volumes:
+      - osdata:/usr/share/opensearch/data
+    networks: [jobnet]
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: uvicorn apps.api.main:app --host 0.0.0.0 --port 8000 --workers 2
+    env_file: .env.prod
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-jobuser}:${POSTGRES_PASSWORD:-}@postgres:5432/${POSTGRES_DB:-jobs}
+      REDIS_URL: redis://redis:6379/0
+      OPENSEARCH_URL: http://opensearch:9200
+    ports:
+      - "8000:8000"
+    networks: [jobnet]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A apps.worker.celery_app worker --loglevel=info --concurrency=2
+    env_file: .env.prod
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-jobuser}:${POSTGRES_PASSWORD:-}@postgres:5432/${POSTGRES_DB:-jobs}
+      REDIS_URL: redis://redis:6379/0
+      OPENSEARCH_URL: http://opensearch:9200
+    networks: [jobnet]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A apps.worker.celery_app beat --loglevel=info
+    env_file: .env.prod
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-jobuser}:${POSTGRES_PASSWORD:-}@postgres:5432/${POSTGRES_DB:-jobs}
+      REDIS_URL: redis://redis:6379/0
+      OPENSEARCH_URL: http://opensearch:9200
+    networks: [jobnet]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      API_BASE_URL: http://api:8000
+      API_KEY: ${API_KEY:-}
+      NEXT_PUBLIC_API_BASE_URL: ${PUBLIC_API_URL:-http://localhost:8000}
+    ports:
+      - "3000:3000"
+    networks: [jobnet]
+    depends_on:
+      - api
+    restart: unless-stopped
+
+networks:
+  jobnet:
+    driver: bridge
+
+volumes:
+  pgdata:
+  osdata:

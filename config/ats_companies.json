@@ -1,0 +1,50 @@
+{
+  "_comment": "Public ATS board tokens to poll. Replace with the companies you care about. These are public careers endpoints and are the most stable data source.",
+  "greenhouse": [
+    "stripe",
+    "databricks",
+    "figma"
+  ],
+  "lever": [
+    "leverdemo"
+  ],
+  "ashby": [
+    "openai",
+    "ramp"
+  ],
+  "workable": [
+    "betterteam"
+  ],
+  "smartrecruiters": [
+    "Bosch",
+    "Visa"
+  ],
+  "recruitee": [
+    "sendcloud",
+    "bynder"
+  ],
+  "breezy": [
+    "breezy-hr"
+  ],
+  "workday": [
+    {"tenant": "nvidia", "host": "wd5", "site": "NVIDIAExternalCareerSite"}
+  ],
+  "personio": [
+    "personio"
+  ],
+  "_teamtailor_comment": "Teamtailor needs a per-company API token, e.g. {\"token\": \"acme\", \"api_token\": \"...\", \"api_version\": \"20240404\"}. Entries without api_token are skipped.",
+  "teamtailor": [],
+  "bamboohr": [
+    "vsptechnologies"
+  ],
+  "_jazzhr_comment": "JazzHR needs an account API key, e.g. {\"api_key\": \"...\", \"board\": \"acme.applytojob.com\"}. Entries without api_key are skipped.",
+  "jazzhr": [],
+  "pinpoint": [
+    "workwithus"
+  ],
+  "rippling": [
+    "spreeai"
+  ],
+  "_jobvite_comment": "Jobvite Job Feed needs a paid key+secret, e.g. {\"api\": \"...\", \"sc\": \"...\", \"site\": \"career-site-name\"}. Entries without api/sc are skipped.",
+  "jobvite": []
+}
