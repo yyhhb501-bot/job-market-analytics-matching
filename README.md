@@ -447,7 +447,8 @@ Implementation: [`packages/deduplication`](packages/deduplication) and
 See [SECURITY.md](SECURITY.md). Highlights:
 
 - **Set `API_KEY` before exposing the API.** Write endpoints then require the
-  `X-API-Key` header; the web app forwards `API_KEY`/`NEXT_PUBLIC_API_KEY`.
+  `X-API-Key` header; the web app attaches it server-side in the Next.js proxy
+route (`app/api/proxy/[...path]`) and never exposes it to the browser.
 - Write and export endpoints are rate-limited; `CORS_ORIGINS=*` is rejected when
   `ENVIRONMENT=production`.
 - Webhooks are **off by default**, block loopback/private/link-local/metadata

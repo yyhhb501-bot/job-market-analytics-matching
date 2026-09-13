@@ -159,6 +159,45 @@ class Settings(BaseSettings):
         return [c.strip().upper() for c in self.default_countries.split(",") if c.strip()]
 
 
+_WEAK_DB_PASSWORDS = (
+    "jobpass",
+    "postgres",
+    "password",
+    "changeme",
+    "change_me_strong",
+)
+
+
+def _database_password(database_url: str) -> str:
+    try:
+        from sqlalchemy.engine import make_url
+
+        return (make_url(database_url).password or "").lower()
+    except Exception:  # noqa: BLE001 - unparseable URL is a separate concern
+        return ""
+
+
+def check_production_settings(settings: Settings) -> list[str]:
+    """Return a list of unsafe settings when running in production.
+
+    An empty list means the configuration is acceptable to start.
+    """
+    if settings.environment.lower() != "production":
+        return []
+    problems: list[str] = []
+    if not settings.api_key:
+        problems.append("API_KEY must be set so write/read endpoints are authenticated")
+    if "*" in settings.cors_origin_list:
+        problems.append("CORS_ORIGINS must list explicit origins (not '*')")
+    if _database_password(settings.database_url) in _WEAK_DB_PASSWORDS:
+        problems.append("DATABASE_URL still uses a default/weak password")
+    if settings.webhook_allow_private:
+        problems.append("WEBHOOK_ALLOW_PRIVATE must be false on public deployments")
+    if settings.auto_create_tables:
+        problems.append("AUTO_CREATE_TABLES must be false (run Alembic migrations instead)")
+    return problems
+
+
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     return Settings()

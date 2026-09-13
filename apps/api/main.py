@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from apps.api.config import get_settings
+from apps.api.config import check_production_settings, get_settings
 from apps.api.routers import export, health, jobs, match, runs, saved_searches
 
 logging.basicConfig(level=logging.INFO)
@@ -19,9 +19,10 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if settings.environment.lower() == "production" and "*" in settings.cors_origin_list:
+    problems = check_production_settings(settings)
+    if problems:
         raise RuntimeError(
-            "CORS_ORIGINS=* is not allowed in production; set explicit origins"
+            "Refusing to start with unsafe production settings:\n- " + "\n- ".join(problems)
         )
     if settings.auto_create_tables:
         try:

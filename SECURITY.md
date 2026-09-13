@@ -9,10 +9,16 @@ defaults but a few decisions are deployment responsibilities.
   write endpoints (create/update/delete/run saved searches, `POST /match`)
   require the `X-API-Key` header. When unset they are open, which is intended
   for local development only.
-- The web app forwards a key via `API_KEY` (server) and `NEXT_PUBLIC_API_KEY`
-  (browser). `NEXT_PUBLIC_*` is visible to anyone who can load the page — only
-  acceptable for a single-user, self-hosted deployment. For multi-user use,
-  put the API behind an authenticating reverse proxy or add real user accounts.
+- The browser never holds the key. Client-initiated writes go to the same-origin
+  Next.js route handler (`app/api/proxy/[...path]`), which attaches the
+  server-only `API_KEY` before calling FastAPI. Do **not** reintroduce a
+  `NEXT_PUBLIC_API_KEY`: every `NEXT_PUBLIC_*` value is shipped to the browser.
+- For multi-user use, replace the shared key with real login/session/JWT and
+  per-user ownership, or put the API behind an authenticating reverse proxy.
+- In `ENVIRONMENT=production` the API **refuses to start** if any of these are
+  unsafe: `API_KEY` unset, `CORS_ORIGINS=*`, a default/weak database password,
+  `WEBHOOK_ALLOW_PRIVATE=true`, or `AUTO_CREATE_TABLES=true`. See
+  `check_production_settings` in `apps/api/config.py`.
 - Never run with `CORS_ORIGINS=*` in production; the API refuses to start in
   `ENVIRONMENT=production` if it is still a wildcard.
 
