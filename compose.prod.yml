@@ -47,6 +47,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: jobseek-api:latest
     command: uvicorn apps.api.main:app --host 0.0.0.0 --port 8000 --workers 2
     env_file: .env.prod
     environment:
@@ -70,9 +71,7 @@ services:
       retries: 10
 
   worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: jobseek-api:latest
     command: celery -A apps.worker.celery_app worker --loglevel=info --concurrency=2
     env_file: .env.prod
     environment:
@@ -89,9 +88,7 @@ services:
     restart: unless-stopped
 
   beat:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: jobseek-api:latest
     command: celery -A apps.worker.celery_app beat --loglevel=info
     env_file: .env.prod
     environment:

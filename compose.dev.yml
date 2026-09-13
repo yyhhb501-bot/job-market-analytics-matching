@@ -45,6 +45,7 @@ services:
 
   api:
     build: .
+    image: jobseek-api:latest
     command: uvicorn apps.api.main:app --host 0.0.0.0 --port 8000 --reload
     env_file: .env
     environment:
@@ -52,7 +53,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       OPENSEARCH_URL: http://opensearch:9200
     ports:
-      - "8000:8000"
+      - "8010:8000"
     volumes:
       - ./:/app
     depends_on:
@@ -62,7 +63,7 @@ services:
         condition: service_healthy
 
   worker:
-    build: .
+    image: jobseek-api:latest
     command: celery -A apps.worker.celery_app worker --loglevel=info --concurrency=2
     env_file: .env
     environment:
@@ -78,7 +79,7 @@ services:
         condition: service_healthy
 
   beat:
-    build: .
+    image: jobseek-api:latest
     command: celery -A apps.worker.celery_app beat --loglevel=info
     env_file: .env
     environment:
@@ -100,7 +101,7 @@ services:
     environment:
       API_BASE_URL: http://api:8000
       API_KEY: ${API_KEY:-}
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8010
       WATCHPACK_POLLING: "true"
     ports:
       - "3000:3000"

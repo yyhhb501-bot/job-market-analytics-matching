@@ -1,23 +1,64 @@
 {
-  "_comment": "Public ATS board tokens to poll. Replace with the companies you care about. These are public careers endpoints and are the most stable data source.",
+  "_comment": "Public ATS board tokens. This is a broad starter set across industries; replace with the companies you care about. Endpoints are public career boards and are the most stable source.",
   "greenhouse": [
     "stripe",
     "databricks",
-    "figma"
+    "figma",
+    "airbnb",
+    "doordash",
+    "coinbase",
+    "datadog",
+    "gitlab",
+    "cloudflare",
+    "reddit",
+    "robinhood",
+    "dropbox",
+    "pinterest",
+    "lyft",
+    "instacart",
+    "zillow",
+    "wayfair",
+    "affirm",
+    "discord",
+    "flexport",
+    "samsara",
+    "benchling",
+    "hubspot",
+    "twilio",
+    "mongodb",
+    "elastic",
+    "brex",
+    "gusto",
+    "asana",
+    "chime"
   ],
   "lever": [
-    "leverdemo"
+    "leverdemo",
+    "plaid",
+    "kayak",
+    "outreach"
   ],
   "ashby": [
     "openai",
-    "ramp"
+    "ramp",
+    "notion",
+    "linear",
+    "vanta",
+    "replit",
+    "mercury",
+    "clay",
+    "deel",
+    "harvey",
+    "elevenlabs"
   ],
   "workable": [
     "betterteam"
   ],
   "smartrecruiters": [
     "Bosch",
-    "Visa"
+    "Visa",
+    "McDonalds",
+    "Ubisoft"
   ],
   "recruitee": [
     "sendcloud",
@@ -40,10 +81,13 @@
   "_jazzhr_comment": "JazzHR needs an account API key, e.g. {\"api_key\": \"...\", \"board\": \"acme.applytojob.com\"}. Entries without api_key are skipped.",
   "jazzhr": [],
   "pinpoint": [
-    "workwithus"
+    "workwithus",
+    "forterro"
   ],
   "rippling": [
-    "spreeai"
+    "spreeai",
+    "fabric-inc",
+    "plenful"
   ],
   "_jobvite_comment": "Jobvite Job Feed needs a paid key+secret, e.g. {\"api\": \"...\", \"sc\": \"...\", \"site\": \"career-site-name\"}. Entries without api/sc are skipped.",
   "jobvite": []
