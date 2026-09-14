@@ -126,6 +126,62 @@ export function getStats(): Promise<Stats> {
   return getJson<Stats>("/api/v1/stats");
 }
 
+export type CompareAreaMetrics = {
+  label: string;
+  active_jobs: number;
+  new_jobs: number;
+  unique_companies: number;
+  remote_ratio: number;
+  salary_coverage: number;
+  salary_median: number | null;
+  salary_currency: string | null;
+  salary_sample: number;
+  top_skills: { skill: string; count: number }[];
+  top_companies: { company: string; count: number }[];
+  daily_counts: { date: string; count: number }[];
+  source_counts: { source: string; count: number }[];
+};
+
+export type CompareResponse = {
+  occupation: string | null;
+  period_days: number;
+  area_a: CompareAreaMetrics;
+  area_b: CompareAreaMetrics;
+  comparison: {
+    job_count_ratio: number | null;
+    salary_difference_percent: number | null;
+    remote_ratio_difference: number | null;
+  };
+  data_quality: { deduplicated: boolean; last_updated_at: string | null };
+  summary: string;
+};
+
+export function compareMarkets(
+  query: Record<string, string | undefined>
+): Promise<CompareResponse> {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && String(value).trim() !== "") params.set(key, value);
+  }
+  return getJson<CompareResponse>(`/api/v1/compare?${params.toString()}`);
+}
+
+export function getLocations(
+  q: string,
+  country?: string,
+  limit = 10
+): Promise<{ country: string | null; state: string | null; city: string | null; count: number }[]> {
+  const params = new URLSearchParams({ q, limit: String(limit) });
+  if (country) params.set("country", country);
+  return getJson(`/api/v1/locations?${params.toString()}`);
+}
+
+export function getOccupations(q = "", limit = 50): Promise<{ occupation_group: string; count: number }[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (q) params.set("q", q);
+  return getJson(`/api/v1/occupations?${params.toString()}`);
+}
+
 export type SavedSearch = {
   id: number;
   name: string;

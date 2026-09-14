@@ -59,6 +59,8 @@ def _job_fields(job: NormalizedJob, hashes: dict) -> dict:
         "skills": enriched["skills"],
         "summary": enriched["summary"],
         "summary_source": "extractive" if enriched["summary"] else None,
+        "occupation_group": enriched.get("occupation_group") or "other",
+        "seniority": enriched.get("seniority"),
         "canonical_url": job.canonical_url,
         "apply_url": job.apply_url,
         "title": job.title,

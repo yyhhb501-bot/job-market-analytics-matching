@@ -201,7 +201,7 @@ def _cmd_enrich(args: argparse.Namespace) -> int:
 
     total = 0
     embedded = 0
-    while True:
+    for _ in range(100):  # safety cap so a pathological batch can't loop forever
         result = enrich_jobs_sync(batch_size=args.batch_size)
         total += result["enriched"]
         embedded += result["embedded"]

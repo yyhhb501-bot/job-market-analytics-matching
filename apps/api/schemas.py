@@ -166,6 +166,55 @@ class RunsSummaryResponse(BaseModel):
     sources: list[SourceRunSummary]
 
 
+class CompareAreaMetrics(BaseModel):
+    label: str
+    active_jobs: int
+    new_jobs: int
+    unique_companies: int
+    remote_ratio: float
+    salary_coverage: float
+    salary_median: float | None = None
+    salary_currency: str | None = None
+    salary_sample: int = 0
+    top_skills: list[dict] = []
+    top_companies: list[dict] = []
+    daily_counts: list[dict] = []
+    source_counts: list[dict] = []
+
+
+class CompareComparison(BaseModel):
+    job_count_ratio: float | None = None
+    salary_difference_percent: float | None = None
+    remote_ratio_difference: float | None = None
+
+
+class CompareDataQuality(BaseModel):
+    deduplicated: bool
+    last_updated_at: datetime | None = None
+
+
+class CompareResponse(BaseModel):
+    occupation: str | None = None
+    period_days: int
+    area_a: CompareAreaMetrics
+    area_b: CompareAreaMetrics
+    comparison: CompareComparison
+    data_quality: CompareDataQuality
+    summary: str
+
+
+class LocationOut(BaseModel):
+    country: str | None = None
+    state: str | None = None
+    city: str | None = None
+    count: int
+
+
+class OccupationOut(BaseModel):
+    occupation_group: str
+    count: int
+
+
 class MatchRequest(BaseModel):
     resume: str = Field(min_length=1, max_length=20000)
     limit: int = Field(default=20, ge=1, le=100)

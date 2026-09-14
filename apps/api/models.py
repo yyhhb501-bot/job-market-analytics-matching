@@ -104,6 +104,9 @@ class Job(Base):
     summary: Mapped[str | None] = mapped_column(Text)
     summary_source: Mapped[str | None] = mapped_column(String(20))
     embedding: Mapped[list | None] = mapped_column(json_type())
+    # occupation taxonomy used by the market-compare feature
+    occupation_group: Mapped[str | None] = mapped_column(String(60), index=True)
+    seniority: Mapped[str | None] = mapped_column(String(20))
 
     created_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, server_default=func.now()
@@ -116,6 +119,8 @@ class Job(Base):
         UniqueConstraint("source", "source_job_id", name="uq_jobs_source_job_id"),
         Index("ix_jobs_source_first_seen", "source", "first_seen_at"),
         Index("ix_jobs_country_company", "country", "company_normalized"),
+        Index("ix_jobs_location_active", "country", "state", "city", "is_active"),
+        Index("ix_jobs_occupation_country", "occupation_group", "country"),
         Index(
             "uq_jobs_dedup_key_active",
             "dedup_key",

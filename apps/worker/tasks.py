@@ -22,7 +22,7 @@ from apps.worker.celery_app import celery_app
 from apps.worker.pipeline import run_collector
 from collectors.base import SearchParams
 from collectors.registry import build_collectors
-from packages.enrichment import enrich_job
+from packages.enrichment import classify_occupation, classify_seniority, enrich_job
 from packages.llm import build_chat_client, build_summary_prompt
 from packages.search import build_search_backend, job_to_document
 from packages.semantic import build_embedder, embed_text
@@ -139,6 +139,18 @@ def enrich_jobs_sync(batch_size: int = 500, with_embeddings: bool = True) -> dic
             if job.summary_source != "llm":
                 job.summary = enriched["summary"]
                 job.summary_source = "extractive" if enriched["summary"] else None
+            job.occupation_group = job.occupation_group or enriched.get("occupation_group") or "other"
+            job.seniority = job.seniority or enriched.get("seniority")
+            updated += 1
+
+        # Jobs whose occupation could not be classified still get "other" so the
+        # backfill is idempotent and the CLI loop terminates.
+        pending_occupation = session.scalars(
+            select(Job).where(Job.occupation_group.is_(None)).limit(batch_size)
+        ).all()
+        for job in pending_occupation:
+            job.occupation_group = classify_occupation(job.title, job.description) or "other"
+            job.seniority = job.seniority or classify_seniority(job.title)
             updated += 1
         session.commit()
 

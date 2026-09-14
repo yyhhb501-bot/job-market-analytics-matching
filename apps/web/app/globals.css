@@ -583,6 +583,25 @@ main.container {
   font-size: 12px;
 }
 
+.bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bars li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.bars li:last-child {
+  border-bottom: none;
+}
+
 /* resume match + skills */
 .tag.skill {
   background: #ecfdf5;

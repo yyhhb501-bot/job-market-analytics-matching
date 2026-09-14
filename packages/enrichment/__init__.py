@@ -11,6 +11,8 @@ import re
 from collections import Counter
 from typing import Any
 
+from packages.enrichment.occupations import classify_occupation, classify_seniority
+
 # Canonical skill -> surface forms to look for (lower-cased).
 SKILLS: dict[str, tuple[str, ...]] = {
     "Python": ("python",),
@@ -182,14 +184,19 @@ def enrich_job(job: Any) -> dict[str, Any]:
     text = " ".join(
         str(part) for part in (getattr(job, "title", ""), getattr(job, "description", "")) if part
     )
+    title = getattr(job, "title", None)
     return {
         "skills": extract_skills(text),
         "summary": summarize(getattr(job, "description", None)),
+        "occupation_group": classify_occupation(title, getattr(job, "description", None)),
+        "seniority": classify_seniority(title),
     }
 
 
 __all__ = [
     "SKILLS",
+    "classify_occupation",
+    "classify_seniority",
     "enrich_job",
     "extract_skills",
     "match_resume",

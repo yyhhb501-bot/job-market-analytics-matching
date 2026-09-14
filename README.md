@@ -229,6 +229,9 @@ them are skipped.
 | GET | `/api/v1/jobs/{id}` | Single job |
 | GET | `/api/v1/sources` | Known sources, which are enabled, per-source counts |
 | GET | `/api/v1/stats` | Totals by source and country |
+| GET | `/api/v1/compare` | Two-region market comparison (`q`, `area_a_*`, `area_b_*`, `days`, `currency`) |
+| GET | `/api/v1/locations` | City/state suggestions (`q`, `country`) |
+| GET | `/api/v1/occupations` | Occupation groups with counts |
 | GET | `/api/v1/fx` | FX base currency + rates used for salary display |
 | GET | `/api/v1/runs` | Recent collector runs (`source`, `status`, `limit`) |
 | GET | `/api/v1/runs/summary` | Per-source run health summary |
@@ -390,6 +393,23 @@ USD and AUD are **never mixed**: the original amount and currency are stored,
 and a single display currency can be derived at query/render time via an FX
 rate.
 
+### Market comparison
+
+`GET /api/v1/compare` aggregates one occupation across two areas over a time
+window and is exposed at the UI page `/compare`:
+
+- active jobs, new jobs in the period, unique companies
+- remote ratio, salary coverage and FX-normalised **salary median**
+- top skills, top companies, daily trend, source mix
+- deterministic Chinese summary (no LLM, so numbers are never invented)
+- data-quality line: dedup on/off, last update time, salary sample sizes
+
+Jobs carry a rule-based `occupation_group` (e.g. `data-analyst`,
+`registered-nurse`, `software-engineer`) and `seniority`; unknown titles fall
+into `other`. The taxonomy lives in `packages/enrichment/occupations.py` and can
+later be mapped to US SOC / AU ANZSCO codes. For very large datasets the next
+step is a precomputed `job_market_daily_stats` table.
+
 ### Job lifecycle
 
 `is_active`, `last_seen_at`, `closed_at` and `inactive_reason` track liveness.
@@ -443,7 +463,7 @@ Implementation: [`packages/deduplication`](packages/deduplication) and
 │   ├── deduplication/       # normalisation + dedup keys
 │   ├── ranking/             # keyword / recency scoring
 │   ├── fx/                  # currency conversion for salary display
-│   ├── enrichment/          # skills, summaries, résumé match score
+│   ├── enrichment/          # skills, summaries, occupation taxonomy, match score
 │   ├── semantic/            # embeddings, cosine, cross-encoder rerankers
 │   ├── llm/                 # OpenAI-compatible chat client (summaries)
 │   └── search/              # optional OpenSearch index + query DSL
