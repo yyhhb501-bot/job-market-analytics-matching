@@ -9,16 +9,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v6
         with:
-          python-version: "3.13"
-          cache: pip
+          enable-cache: true
+          python-version: "3.12"
+      - name: Lock file is up to date
+        run: uv lock --check
+      - name: Pinned requirements.txt matches the lock
+        run: |
+          uv export --frozen --no-dev --no-emit-project -o requirements.txt
+          git diff --exit-code requirements.txt
       - name: Install
-        run: pip install -e ".[dev]"
+        run: uv sync --frozen --extra dev
       - name: Lint
-        run: ruff check .
+        run: uv run --no-sync ruff check .
       - name: Tests
-        run: pytest -q
+        run: uv run --no-sync pytest -q
 
   frontend:
     runs-on: ubuntu-latest
@@ -45,17 +51,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v6
         with:
-          python-version: "3.13"
-          cache: pip
+          enable-cache: true
+          python-version: "3.12"
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
           cache-dependency-path: apps/web/package-lock.json
       - name: Install backend
-        run: pip install -e ".[dev]"
+        run: uv sync --frozen --extra dev
       - name: Install frontend
         working-directory: apps/web
         run: npm ci
@@ -105,17 +111,81 @@ jobs:
       TEST_REDIS_URL: redis://localhost:6379/15
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v6
         with:
-          python-version: "3.13"
-          cache: pip
+          enable-cache: true
+          python-version: "3.12"
       - name: Install
-        run: pip install -e ".[dev]"
+        run: uv sync --frozen --extra dev
       - name: Apply migrations
-        run: alembic upgrade head
+        run: uv run --no-sync alembic upgrade head
       - name: Verify downgrade/upgrade
         run: |
-          alembic downgrade base
-          alembic upgrade head
+          uv run --no-sync alembic downgrade base
+          uv run --no-sync alembic upgrade head
       - name: Full test suite (integration tests included)
-        run: pytest -q
+        run: uv run --no-sync pytest -q
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          python-version: "3.12"
+      - name: Install
+        run: uv sync --frozen --extra dev
+      - name: Python dependency audit
+        run: |
+          uv pip install pip-audit
+          uv run --no-sync python -m pip_audit --skip-editable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Node dependency audit
+        working-directory: apps/web
+        run: |
+          npm ci
+          npm audit --audit-level=high
+
+  image-scan:
+    # Baseline: base images may carry unfixed OS vulns; report until triaged,
+    # then remove continue-on-error to make it blocking.
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: jobseek-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Build web image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./apps/web
+          load: true
+          tags: jobseek-web:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Scan backend image
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: jobseek-api:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: Scan web image
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: jobseek-web:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"

@@ -1,5 +1,6 @@
 # Multi-stage build: compile wheels with build tools, run on a slim non-root image.
-FROM python:3.13-slim AS builder
+# Python 3.12: python-jobspy pins numpy==1.26.3 which has no 3.13 wheels.
+FROM python:3.12-slim AS builder
 
 ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
 WORKDIR /build
@@ -13,7 +14,7 @@ RUN pip install --upgrade pip \
     && pip wheel --wheel-dir /wheels -r requirements.txt
 
 
-FROM python:3.13-slim AS runtime
+FROM python:3.12-slim AS runtime
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
