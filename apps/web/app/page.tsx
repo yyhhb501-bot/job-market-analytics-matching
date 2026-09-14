@@ -99,7 +99,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Sea
         </div>
       ) : null}
 
-      <div className="results-head">
+      <div className="results-head" data-testid="results-head">
         <h2>{data.total.toLocaleString()} 个结果</h2>
         <div className="results-tools">
           <a className="btn-ghost small" href={exportUrl(query, "csv")}>
@@ -115,9 +115,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<Sea
       </div>
 
       {data.items.length === 0 ? (
-        <p className="empty">没有符合条件的职位。</p>
+        <p className="empty" data-testid="results-empty">
+          没有符合条件的职位。
+        </p>
       ) : (
-        <div className="job-grid">
+        <div className="job-grid" data-testid="job-grid">
           {data.items.map((job) => (
             <JobCard key={job.id} job={job} />
           ))}

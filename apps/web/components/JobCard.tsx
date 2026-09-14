@@ -16,7 +16,7 @@ export function JobCard({ job }: { job: Job }) {
   const externalUrl = job.apply_url ?? job.canonical_url;
 
   return (
-    <article className="job-card">
+    <article className="job-card" data-testid="job-card">
       <div className="job-card-head">
         <h2>
           <Link href={`/jobs/${job.id}`}>{job.title}</Link>

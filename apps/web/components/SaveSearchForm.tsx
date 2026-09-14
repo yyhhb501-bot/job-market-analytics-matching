@@ -69,7 +69,7 @@ export function SaveSearchForm({ values }: { values: Record<string, string> }) {
   }
 
   return (
-    <form className="save-search" onSubmit={onSubmit}>
+    <form className="save-search" onSubmit={onSubmit} data-testid="save-search-form">
       <div className="field field-grow">
         <label htmlFor="saved-name">保存此搜索</label>
         <input
@@ -125,12 +125,20 @@ export function SaveSearchForm({ values }: { values: Record<string, string> }) {
         </select>
       </div>
       <div className="field field-actions">
-        <button type="submit" className="btn-primary" disabled={busy}>
+        <button type="submit" className="btn-primary" disabled={busy} data-testid="save-search-submit">
           {busy ? "保存中…" : "保存搜索"}
         </button>
       </div>
-      {message ? <p className="form-message ok">{message}</p> : null}
-      {error ? <p className="form-message error">{error}</p> : null}
+      {message ? (
+        <p className="form-message ok" data-testid="save-search-message">
+          {message}
+        </p>
+      ) : null}
+      {error ? (
+        <p className="form-message error" data-testid="save-search-error">
+          {error}
+        </p>
+      ) : null}
     </form>
   );
 }

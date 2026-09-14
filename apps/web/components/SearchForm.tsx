@@ -1,4 +1,6 @@
-﻿const COUNTRIES: [string, string][] = [
+﻿import Link from "next/link";
+
+const COUNTRIES: [string, string][] = [
   ["", "全部国家"],
   ["US", "美国"],
   ["AU", "澳大利亚"],
@@ -65,7 +67,7 @@ const CURRENCIES: [string, string][] = [
 
 export function SearchForm({ values }: { values: Record<string, string> }) {
   return (
-    <form className="search-form" action="/" method="get">
+    <form className="search-form" action="/" method="get" data-testid="search-form">
       <div className="field field-grow">
         <label htmlFor="q">关键词</label>
         <input
@@ -74,11 +76,12 @@ export function SearchForm({ values }: { values: Record<string, string> }) {
           type="search"
           placeholder="例如：data engineer"
           defaultValue={values.q ?? ""}
+          data-testid="search-q"
         />
       </div>
       <div className="field">
         <label htmlFor="country">国家</label>
-        <select id="country" name="country" defaultValue={values.country ?? ""}>
+        <select id="country" name="country" defaultValue={values.country ?? ""} data-testid="search-country">
           {COUNTRIES.map(([value, label]) => (
             <option key={value} value={value}>
               {label}
@@ -157,12 +160,12 @@ export function SearchForm({ values }: { values: Record<string, string> }) {
         </select>
       </div>
       <div className="field field-actions">
-        <button type="submit" className="btn-primary">
+        <button type="submit" className="btn-primary" data-testid="search-submit">
           搜索
         </button>
-        <a className="btn-ghost" href="/">
+        <Link className="btn-ghost" href="/">
           重置
-        </a>
+        </Link>
       </div>
     </form>
   );

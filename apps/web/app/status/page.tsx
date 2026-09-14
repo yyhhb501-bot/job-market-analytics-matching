@@ -47,7 +47,7 @@ export default async function StatusPage() {
       {error ? <div className="notice">无法连接 API（{error}）。</div> : null}
 
       {summary && summary.sources.length > 0 ? (
-        <div className="job-grid">
+        <div className="job-grid" data-testid="source-cards">
           {summary.sources.map((row) => (
             <div key={row.source} className="job-card">
               <div className="job-card-head">
@@ -67,7 +67,11 @@ export default async function StatusPage() {
           ))}
         </div>
       ) : (
-        !error && <p className="empty">暂无采集运行记录。</p>
+        !error && (
+          <p className="empty" data-testid="status-empty">
+            暂无采集运行记录。
+          </p>
+        )
       )}
 
       {health.length > 0 ? (

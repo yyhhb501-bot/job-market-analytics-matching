@@ -27,7 +27,7 @@ export default async function JobDetailPage({
   const posted = formatDate(job.posted_at);
 
   return (
-    <article className="job-detail">
+    <article className="job-detail" data-testid="job-detail">
       <Link href="/" className="back-link">
         &larr; 返回搜索
       </Link>

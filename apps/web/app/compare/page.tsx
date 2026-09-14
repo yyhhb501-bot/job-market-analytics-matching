@@ -95,7 +95,7 @@ export default async function ComparePage({
         <p>比较两个地区同一职业的岗位数量、薪资、远程比例、技能与趋势。</p>
       </section>
 
-      <form className="search-form" action="/compare" method="get">
+      <form className="search-form" action="/compare" method="get" data-testid="compare-form">
         <div className="field field-grow">
           <label htmlFor="q">职业</label>
           <input
@@ -158,7 +158,7 @@ export default async function ComparePage({
 
       {data ? (
         <>
-          <div className="notice">
+          <div className="notice" data-testid="compare-summary">
             {data.summary}
             <div className="meta" style={{ marginTop: 6 }}>
               数据质量：{data.data_quality.deduplicated ? "已按去重统计" : "含重复来源"} ·
