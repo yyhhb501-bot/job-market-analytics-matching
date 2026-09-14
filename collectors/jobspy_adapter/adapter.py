@@ -49,9 +49,13 @@ class JobSpyCollector(BaseCollector):
 
     def _sites(self, params: SearchParams) -> list[str]:
         sites = params.extra.get("sites")
-        if sites:
-            return [site.strip().lower() for site in sites]
-        return ["indeed", "glassdoor", "google"]
+        if not sites:
+            sites = ["indeed", "glassdoor", "google"]
+        sites = [str(site).strip().lower() for site in sites if str(site).strip()]
+        # Compliance gate: LinkedIn is only queried when explicitly enabled.
+        if not self.settings.enable_linkedin:
+            sites = [site for site in sites if site != "linkedin"]
+        return sites or ["indeed"]
 
     async def stream(self, params: SearchParams) -> AsyncIterator[NormalizedJob]:
         try:

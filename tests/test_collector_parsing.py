@@ -456,6 +456,18 @@ def test_jobvite_parse():
     assert job.description == "Own accounts"
 
 
+def test_jobspy_linkedin_is_gated_by_flag():
+    from collectors.base import SearchParams
+    from collectors.jobspy_adapter import JobSpyCollector
+
+    params = SearchParams(extra={"sites": ["linkedin", "indeed"]})
+    gated = JobSpyCollector(Settings(enable_linkedin=False))
+    assert gated._sites(params) == ["indeed"]
+
+    allowed = JobSpyCollector(Settings(enable_linkedin=True))
+    assert allowed._sites(params) == ["linkedin", "indeed"]
+
+
 def test_remoteok_parse():
     collector = RemoteOKCollector(Settings())
     job = collector._parse(
