@@ -10,6 +10,7 @@ so they never leak into public search, market comparison or aggregate stats.
 from __future__ import annotations
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from apps.api.metrics import record_import
@@ -78,7 +79,22 @@ def import_jobs(
         started_at=utcnow(),
     )
     db.add(batch)
-    db.flush()
+    try:
+        db.flush()
+    except IntegrityError:
+        # Lost the race against a concurrent upload with the same
+        # Idempotency-Key: uq_import_batch_idempotency rejected our insert.
+        # Roll back and return the winner instead of failing with a 500.
+        db.rollback()
+        winner = db.scalar(
+            select(ImportBatch).where(
+                ImportBatch.device_id == device.id,
+                ImportBatch.idempotency_key == idempotency_key,
+            )
+        )
+        if winner is not None:
+            return winner, []
+        raise
 
     accepted = 0
     duplicate = 0

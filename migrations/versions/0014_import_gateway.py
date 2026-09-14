@@ -142,6 +142,9 @@ def downgrade() -> None:
         op.create_unique_constraint(
             "uq_jobs_source_job_id", "jobs", ["source", "source_job_id"]
         )
+    # On SQLite nothing else is needed: the table-level UNIQUE constraint from
+    # 0001 (uq_jobs_source_job_id) still exists there — SQLite cannot drop it
+    # without a table rebuild, so 0014's upgrade left it in place.
     op.create_index(
         "uq_jobs_dedup_key_active",
         "jobs",

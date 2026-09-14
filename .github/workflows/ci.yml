@@ -39,7 +39,7 @@ jobs:
       - name: Build
         run: npm run build
 
-  migrations:
+  integration:
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -55,9 +55,20 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - "6379:6379"
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       DATABASE_URL: postgresql+psycopg://jobuser:jobpass@localhost:5432/jobs
       AUTO_CREATE_TABLES: "false"
+      TEST_POSTGRES_URL: postgresql+psycopg://jobuser:jobpass@localhost:5432/jobs
+      TEST_REDIS_URL: redis://localhost:6379/15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -72,7 +83,5 @@ jobs:
         run: |
           alembic downgrade base
           alembic upgrade head
-      - name: PostgreSQL integration tests
-        env:
-          TEST_POSTGRES_URL: postgresql+psycopg://jobuser:jobpass@localhost:5432/jobs
-        run: pytest tests/test_postgres_integration.py -q
+      - name: Full test suite (integration tests included)
+        run: pytest -q
