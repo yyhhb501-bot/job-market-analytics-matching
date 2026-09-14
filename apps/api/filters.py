@@ -91,6 +91,8 @@ def build_conditions(
         conditions.append(Job.posted_at >= posted_after)
     if first_seen_after is not None:
         conditions.append(Job.first_seen_at > first_seen_after)
+    # Public surfaces never expose device-private imports.
+    conditions.append(Job.visibility == "public")
     return conditions
 
 

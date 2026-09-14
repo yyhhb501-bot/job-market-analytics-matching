@@ -122,7 +122,7 @@ def list_matches(
     jobs = db.scalars(
         select(Job)
         .join(SavedSearchMatch, SavedSearchMatch.job_id == Job.id)
-        .where(SavedSearchMatch.saved_search_id == search_id)
+        .where(SavedSearchMatch.saved_search_id == search_id, Job.visibility == "public")
         .order_by(SavedSearchMatch.matched_at.desc(), SavedSearchMatch.id.desc())
         .limit(limit)
     ).all()

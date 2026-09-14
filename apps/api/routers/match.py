@@ -42,7 +42,9 @@ def _rerank_text(job: Job) -> str:
     dependencies=[Depends(require_api_key), Depends(rate_limit("match"))],
 )
 async def match_jobs(payload: MatchRequest, db: Session = Depends(get_db)) -> MatchResponse:
-    statement = select(Job).where(Job.is_active.is_(True), Job.duplicate_of.is_(None))
+    statement = select(Job).where(
+        Job.is_active.is_(True), Job.duplicate_of.is_(None), Job.visibility == "public"
+    )
     if payload.country:
         statement = statement.where(Job.country == payload.country.upper())
     if payload.remote_type:

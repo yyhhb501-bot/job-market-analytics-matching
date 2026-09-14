@@ -10,6 +10,7 @@ tenacity>=9.0
 apscheduler>=3.10,<4
 celery>=5.5
 redis>=5.0
+prometheus-client>=0.20
 pandas>=2.2
 openpyxl>=3.1
 python-jobspy>=1.1.80

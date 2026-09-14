@@ -32,6 +32,8 @@ class JobOut(BaseModel):
     first_seen_at: datetime | None = None
     last_seen_at: datetime | None = None
     duplicate_of: int | None = None
+    visibility: str = "public"
+    collection_mode: str = "platform"
     skills: list[str] | None = None
     summary: str | None = None
     salary_display_min: float | None = None
@@ -307,3 +309,107 @@ class MatchResponse(BaseModel):
     engine: str = "keyword"
     reranked: bool = False
     results: list[MatchResult]
+
+
+class DeviceIn(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    owner: str = Field(min_length=1, max_length=255)
+    platform: str = Field(default="linkedin", max_length=40)
+
+
+class DeviceCreated(BaseModel):
+    id: int
+    name: str
+    owner: str
+    platform: str
+    token: str
+    token_prefix: str
+    created_at: datetime | None = None
+
+
+class DeviceOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    owner: str
+    platform: str
+    token_prefix: str
+    created_at: datetime | None = None
+    last_seen_at: datetime | None = None
+    revoked_at: datetime | None = None
+
+
+class ImportJobIn(BaseModel):
+    source: str = Field(default="linkedin_user_import", max_length=50)
+    source_job_id: str = Field(min_length=1, max_length=255)
+    title: str = Field(min_length=1)
+    company: str | None = None
+    description: str | None = None
+    country: str | None = Field(default=None, max_length=2)
+    state: str | None = None
+    city: str | None = None
+    remote_type: str | None = None
+    employment_type: str | None = None
+    canonical_url: str | None = None
+    apply_url: str | None = None
+    salary_min: float | None = None
+    salary_max: float | None = None
+    salary_currency: str | None = Field(default=None, max_length=3)
+    salary_period: str | None = None
+    posted_at: datetime | None = None
+    collected_at: datetime | None = None
+    raw_payload: dict | None = None
+
+
+class ImportJobsRequest(BaseModel):
+    jobs: list[ImportJobIn] = Field(min_length=1, max_length=500)
+    source: str = Field(default="linkedin_user_import", max_length=50)
+    query: str | None = Field(default=None, max_length=300)
+    geo_id: str | None = Field(default=None, max_length=50)
+
+
+class ImportErrorItem(BaseModel):
+    index: int
+    reason: str
+
+
+class ImportJobsResponse(BaseModel):
+    batch_id: int
+    status: str
+    received_count: int
+    accepted_count: int
+    duplicate_count: int
+    rejected_count: int
+    errors: list[ImportErrorItem] = []
+
+
+class ImportBatchOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    device_id: int
+    source: str
+    query: str | None = None
+    geo_id: str | None = None
+    collection_mode: str
+    status: str
+    received_count: int
+    accepted_count: int
+    duplicate_count: int
+    rejected_count: int
+    error: str | None = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+
+
+class ImportedJobOut(BaseModel):
+    job: JobOut
+    batch_id: int | None = None
+    action: str | None = None
+    collected_at: datetime | None = None
+
+
+class ImportedJobsResponse(BaseModel):
+    total: int
+    items: list[ImportedJobOut]

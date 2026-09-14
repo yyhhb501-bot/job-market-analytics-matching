@@ -168,7 +168,7 @@ def list_fx_rates() -> dict:
 @router.get("/jobs/{job_id}", response_model=JobOut)
 def get_job(job_id: int, db: Session = Depends(get_db)) -> JobOut:
     job = db.get(Job, job_id)
-    if job is None:
+    if job is None or job.visibility != "public":
         raise HTTPException(status_code=404, detail="job not found")
     return JobOut.model_validate(job)
 
@@ -176,7 +176,13 @@ def get_job(job_id: int, db: Session = Depends(get_db)) -> JobOut:
 @router.get("/sources")
 def list_sources(db: Session = Depends(get_db)) -> dict:
     settings = get_settings()
-    counts = dict(db.execute(select(Job.source, func.count()).group_by(Job.source)).all())
+    counts = dict(
+        db.execute(
+            select(Job.source, func.count())
+            .where(Job.visibility == "public")
+            .group_by(Job.source)
+        ).all()
+    )
     enabled = {
         Source.GREENHOUSE.value: settings.enable_ats,
         Source.LEVER.value: settings.enable_ats,
@@ -213,18 +219,30 @@ def list_sources(db: Session = Depends(get_db)) -> dict:
 
 @router.get("/stats", response_model=StatsResponse)
 def stats(db: Session = Depends(get_db)) -> StatsResponse:
-    total = db.scalar(select(func.count()).select_from(Job)) or 0
-    active = db.scalar(select(func.count()).select_from(Job).where(Job.is_active.is_(True))) or 0
+    public = Job.visibility == "public"
+    total = db.scalar(select(func.count()).select_from(Job).where(public)) or 0
+    active = (
+        db.scalar(
+            select(func.count()).select_from(Job).where(Job.is_active.is_(True), public)
+        )
+        or 0
+    )
     by_source = [
         SourceCount(source=source, count=count)
         for source, count in db.execute(
-            select(Job.source, func.count()).group_by(Job.source).order_by(func.count().desc())
+            select(Job.source, func.count())
+            .where(public)
+            .group_by(Job.source)
+            .order_by(func.count().desc())
         ).all()
     ]
     by_country = [
         CountryCount(country=country, count=count)
         for country, count in db.execute(
-            select(Job.country, func.count()).group_by(Job.country).order_by(func.count().desc())
+            select(Job.country, func.count())
+            .where(public)
+            .group_by(Job.country)
+            .order_by(func.count().desc())
         ).all()
     ]
     return StatsResponse(total_jobs=total, active_jobs=active, by_source=by_source, by_country=by_country)

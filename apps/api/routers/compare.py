@@ -45,7 +45,7 @@ def _occupation_condition(q: str):
 def _area_conditions(
     q: str | None, country: str | None, state: str | None, city: str | None, dedup: bool
 ) -> list:
-    conditions = [Job.is_active.is_(True)]
+    conditions = [Job.is_active.is_(True), Job.visibility == "public"]
     if dedup:
         conditions.append(Job.duplicate_of.is_(None))
     if q:
@@ -272,7 +272,7 @@ def locations(
 ) -> list[LocationOut]:
     statement = (
         select(Job.country, Job.state, Job.city, func.count().label("count"))
-        .where(Job.is_active.is_(True), Job.city.is_not(None))
+        .where(Job.is_active.is_(True), Job.visibility == "public", Job.city.is_not(None))
     )
     if country:
         statement = statement.where(Job.country == country.upper())
@@ -299,7 +299,7 @@ def occupations(
 ) -> list[OccupationOut]:
     statement = (
         select(Job.occupation_group, func.count().label("count"))
-        .where(Job.occupation_group.is_not(None))
+        .where(Job.occupation_group.is_not(None), Job.visibility == "public")
     )
     if q:
         statement = statement.where(Job.occupation_group.ilike(f"%{q}%"))

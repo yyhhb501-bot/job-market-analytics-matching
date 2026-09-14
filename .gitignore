@@ -24,6 +24,13 @@ env/
 data/
 logs/
 out/
+backups/
+
+# Celery Beat runtime schedule (must not be committed; use a volume/RedBeat)
+celerybeat-schedule
+celerybeat-schedule-shm
+celerybeat-schedule-wal
+celerybeat-schedule-journal
 
 # Frontend build artifacts / coverage
 .next/
@@ -38,3 +45,4 @@ htmlcov/
 Thumbs.db
 .idea/
 .vscode/
+.zcode/

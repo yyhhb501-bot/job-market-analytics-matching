@@ -23,7 +23,12 @@ build
 !.env.example
 data
 logs
+backups
 coverage
 .coverage
 htmlcov
 *.tsbuildinfo
+# Not server code: local agent (needs selenium/selenium only on the user's PC).
+clients
+tests
+.github

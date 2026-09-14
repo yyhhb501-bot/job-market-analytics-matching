@@ -16,6 +16,7 @@ from typing import Any
 import httpx
 
 from apps.api.config import Settings
+from apps.api.metrics import record_webhook
 from apps.api.url_safety import (
     UnsafeUrlError,
     normalize_webhook_url,
@@ -123,6 +124,7 @@ def send_webhook(
             validate_webhook_url(url, **kwargs)
         except UnsafeUrlError as exc:
             logger.warning("webhook blocked: %s", exc)
+            record_webhook("blocked")
             return False
 
     body = json.dumps(payload).encode("utf-8")
@@ -139,11 +141,14 @@ def send_webhook(
                 response = http.post(url, content=body, headers=headers)
         if 300 <= response.status_code < 400:
             logger.warning("webhook redirect rejected for %s", url)
+            record_webhook("blocked")
             return False
         response.raise_for_status()
+        record_webhook("success")
         return True
     except Exception as exc:  # noqa: BLE001 - never break the alert run
         logger.warning("webhook to %s failed: %s", url, exc)
+        record_webhook("failure")
         return False
 
 

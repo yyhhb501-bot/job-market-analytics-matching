@@ -256,7 +256,10 @@ def reindex_jobs_sync(batch_size: int = 1000) -> dict:
     with get_session_factory()() as session:
         while True:
             jobs = session.scalars(
-                select(Job).where(Job.id > last_id).order_by(Job.id).limit(batch_size)
+                select(Job)
+                .where(Job.id > last_id, Job.visibility == "public")
+                .order_by(Job.id)
+                .limit(batch_size)
             ).all()
             if not jobs:
                 break

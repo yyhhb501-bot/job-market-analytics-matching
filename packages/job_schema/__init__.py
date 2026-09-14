@@ -73,6 +73,20 @@ class RemoteType(StrEnum):
     UNKNOWN = "unknown"
 
 
+class Visibility(StrEnum):
+    """Whether a job is part of the public market data or user-private import."""
+
+    PUBLIC = "public"
+    PRIVATE = "private"
+
+
+class CollectionMode(StrEnum):
+    """How a job entered the platform."""
+
+    PLATFORM = "platform"
+    USER_LOCAL = "user_local"
+
+
 class EmploymentType(StrEnum):
     FULL_TIME = "full_time"
     PART_TIME = "part_time"
@@ -122,10 +136,12 @@ class NormalizedJob(BaseModel):
 
 __all__ = [
     "ATS_SOURCES",
+    "CollectionMode",
     "Country",
     "EmploymentType",
     "NormalizedJob",
     "RemoteType",
     "SalaryPeriod",
     "Source",
+    "Visibility",
 ]

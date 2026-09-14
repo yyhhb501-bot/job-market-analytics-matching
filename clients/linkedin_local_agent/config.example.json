@@ -1,0 +1,68 @@
+{
+  "_notes": [
+    "Copy to ~/.jobagg/linkedin-collector/config.json and edit.",
+    "geo_id must be the number from the LinkedIn jobs URL after selecting the",
+    "location, e.g. https://www.linkedin.com/jobs/search/?geoId=103644278 .",
+    "Values starting with REPLACE_WITH_ are rejected at startup on purpose.",
+    "The device token is read from the environment variable below, never stored here."
+  ],
+  "api_base_url": "http://localhost:8010",
+  "device_token_env": "JOBAGG_DEVICE_TOKEN",
+  "source": "linkedin_user_import",
+  "occupation_groups": {
+    "data-analyst": {
+      "primary": ["Data Analyst", "Business Intelligence Analyst", "BI Analyst"],
+      "secondary": ["Reporting Analyst", "Analytics Specialist", "Insights Analyst"],
+      "exclusions": ["Laboratory Analyst", "Financial Analyst", "Security Analyst"]
+    }
+  },
+  "locations": {
+    "centers": [
+      {
+        "country": "AU",
+        "state": "VIC",
+        "city": "Melbourne",
+        "geo_id": "REPLACE_WITH_MELBOURNE_GEOID",
+        "keywords": ["Melbourne, Victoria, Australia"]
+      },
+      {
+        "country": "AU",
+        "state": "NSW",
+        "city": "Sydney",
+        "geo_id": "REPLACE_WITH_SYDNEY_GEOID",
+        "keywords": ["Sydney, New South Wales, Australia"]
+      },
+      {
+        "country": "US",
+        "state": "TX",
+        "city": "Austin",
+        "geo_id": "REPLACE_WITH_AUSTIN_GEOID",
+        "keywords": ["Austin, Texas, United States"]
+      }
+    ],
+    "countries": [
+      { "country": "AU", "geo_id": "101452733", "keywords": ["Australia"] },
+      { "country": "US", "geo_id": "103644278", "keywords": ["United States"] }
+    ]
+  },
+  "search": {
+    "date_posted_seconds": 604800,
+    "distance_miles": 25,
+    "results_per_page": 25,
+    "max_pages_per_query": 3,
+    "delay_seconds": 4.0,
+    "delay_jitter_seconds": 3.0,
+    "max_detail_fetches": 120,
+    "max_queries": 40
+  },
+  "browser": {
+    "profile_dir": "~/.jobagg/linkedin-profile",
+    "headless": false,
+    "page_load_timeout": 45,
+    "challenge_timeout": 600,
+    "window_size": "1400,1000"
+  },
+  "storage": {
+    "data_dir": "~/.jobagg/linkedin-collector"
+  }
+}

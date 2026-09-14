@@ -6,6 +6,8 @@ import os
 
 os.environ["AUTO_CREATE_TABLES"] = "false"
 os.environ["DATABASE_URL"] = "sqlite+pysqlite:///:memory:"
+# Keep rate-limit tests deterministic and independent of a local Redis.
+os.environ["RATE_LIMIT_BACKEND"] = "memory"
 
 import pytest  # noqa: E402
 from sqlalchemy import create_engine  # noqa: E402

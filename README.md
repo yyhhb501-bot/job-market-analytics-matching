@@ -91,14 +91,26 @@ interval. To use the APScheduler fallback instead (no Redis needed), run
 ## Quick start (Docker, production)
 
 ```bash
-cp .env.prod.example .env.prod     # set POSTGRES_PASSWORD, API_KEY, CORS_ORIGINS...
-docker compose -f compose.prod.yml up -d --build
-docker compose -f compose.prod.yml run --rm api alembic upgrade head
+cp .env.prod.example .env.prod     # set POSTGRES_PASSWORD, REDIS_PASSWORD, API_KEY, PUBLIC_DOMAIN...
+docker compose -f compose.prod.yml --env-file .env.prod build
+docker compose -f compose.prod.yml --env-file .env.prod up -d
 ```
 
-Only `api` (8000) and `web` (3000) are published; Postgres/Redis/OpenSearch
-stay on the internal network. Images run non-root and the frontend is a
-multi-stage `next start` build.
+Only Caddy publishes ports (80/443) and proxies `/api/*`, `/health`, `/metrics`
+and `/docs` to the API, everything else to the web app. Postgres/Redis/API/Web
+stay on the internal network; Redis requires a password and API/worker/beat run
+read-only with resource limits and log rotation. Migrations run once through the
+`migrate` service before the API starts (`service_completed_successfully`), and
+the API refuses to boot with unsafe production settings.
+
+Back up the database from the host (add to cron):
+
+```bash
+scripts/backup_postgres.sh          # -> backups/jobs-YYYYmmdd-HHMMSS.sql.gz, 14-day retention
+```
+
+Optional search backend: add `--profile search` to run OpenSearch and set
+`SEARCH_BACKEND=opensearch` + `OPENSEARCH_URL=http://opensearch:9200`.
 
 ## Quick start (local preview)
 
@@ -246,6 +258,18 @@ board token string, but some providers take objects:
 Teamtailor, JazzHR and Jobvite require per-account credentials; entries without
 them are skipped.
 
+## Observability
+
+`GET /metrics` (Prometheus text format, `ENABLE_METRICS=true`) exposes HTTP
+request rate/latency plus `collector_runs_total`, `collector_jobs_total`,
+`collector_http_errors_total`, `collector_parse_errors_total`,
+`import_batch_jobs_total` and `webhook_delivery_total`, with scrape-time gauges
+`job_freshness_seconds` and `queue_depth`. Restrict `/metrics` at the edge.
+
+Rate limiting is selected by `RATE_LIMIT_BACKEND`: `memory` (per-process),
+`redis` (shared across API replicas) or `auto` (Redis when reachable, else
+memory; default). Redis failures fail open so an outage cannot take the API down.
+
 ## API
 
 | Method | Path | Description |
@@ -271,6 +295,12 @@ them are skipped.
 | POST | `/api/v1/saved-searches/{id}/run` | Evaluate now and record new matches |
 | GET | `/api/v1/saved-searches/{id}/matches` | Jobs matched by the search |
 | GET | `/api/v1/saved-searches/unsubscribe?token=...` | Deactivate a saved search (email link) |
+| POST | `/api/v1/import/devices` | Register a local collector device; returns its token once (`X-API-Key`) |
+| GET | `/api/v1/import/devices` | List registered devices (`X-API-Key`) |
+| POST | `/api/v1/import/devices/{id}/revoke` | Revoke a device token (`X-API-Key`) |
+| POST | `/api/v1/import/jobs` | Upload locally collected jobs (`Authorization: Bearer <device-token>`, `Idempotency-Key`) |
+| GET | `/api/v1/import/jobs` | Private workspace: jobs this device imported |
+| GET | `/api/v1/import/batches` | Import batches recorded for this device |
 
 Example:
 
@@ -288,6 +318,33 @@ curl -X POST "http://localhost:8000/api/v1/saved-searches/1/run"
 # ranked full-text search (PostgreSQL)
 curl "http://localhost:8000/api/v1/jobs?q=data%20engineer&sort=relevance"
 ```
+
+### Local collector import gateway
+
+User-run collectors (e.g. a local LinkedIn agent) never touch the database
+directly. The operator registers a device with `X-API-Key` and hands the
+returned `jagg_...` token to the user; only its SHA-256 hash is stored and it
+can be revoked at any time. The agent then uploads normalised jobs:
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/import/jobs" \
+  -H "Authorization: Bearer jagg_xxx" \
+  -H "Idempotency-Key: 6f1c...-uuid" \
+  -H "Content-Type: application/json" \
+  -d '{"source":"linkedin_user_import","query":"data analyst","geo_id":"103164784",
+       "jobs":[{"source_job_id":"4123456789","title":"Data Analyst","company":"Acme",
+                "description":"...","city":"Melbourne","state":"VIC","country":"AU"}]}'
+```
+
+Uploaded jobs are stored in the same `jobs` table but tagged
+`visibility=private` and `collection_mode=user_local`, owned by the device.
+Private rows are excluded from `/jobs`, `/jobs/{id}`, `/stats`, `/compare`,
+`/locations`, `/occupations`, `/match`, export, saved-search alerts and the
+OpenSearch index. Deduplication is owner-scoped: a device's imports dedup
+against public data and its own prior imports, never against another device's
+private rows. The uploading device can read its own workspace via
+`GET /api/v1/import/jobs`. Set `ENABLE_IMPORT_GATEWAY=false` to remove the
+endpoints entirely.
 
 ### Full-text search
 

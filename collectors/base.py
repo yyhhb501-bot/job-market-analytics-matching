@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 import httpx
 
 from apps.api.config import Settings
+from apps.api.metrics import record_http_error
 from packages.job_schema import NormalizedJob
 
 
@@ -51,13 +52,24 @@ class BaseCollector(ABC):
     def validate(self) -> None:
         """Raise :class:`CollectorError` if required config is missing."""
 
+    def _record_response(self, response: httpx.Response) -> None:
+        """Count upstream error responses (429/403/5xx) per collector."""
+        try:
+            if response.status_code >= 400:
+                record_http_error(self.name, response.status_code)
+        except Exception:  # noqa: BLE001 - metrics must never break a request
+            pass
+
     def _client(self, **kwargs) -> httpx.AsyncClient:
         headers = {"User-Agent": self.settings.user_agent, "Accept": "application/json"}
         headers.update(kwargs.pop("headers", None) or {})
+        hooks = dict(kwargs.pop("event_hooks", None) or {})
+        hooks["response"] = [*hooks.get("response", []), self._record_response]
         return httpx.AsyncClient(
             headers=headers,
             timeout=self.settings.http_timeout_seconds,
             follow_redirects=True,
+            event_hooks=hooks,
             **kwargs,
         )
 

@@ -36,6 +36,7 @@ INDEX_MAPPING: dict[str, Any] = {
             "first_seen_at": {"type": "date"},
             "is_active": {"type": "boolean"},
             "is_duplicate": {"type": "boolean"},
+            "visibility": {"type": "keyword"},
             "title": {"type": "text"},
             "company": {"type": "text"},
             "description": {"type": "text"},
@@ -83,6 +84,7 @@ def job_to_document(job: Any) -> dict[str, Any]:
         "first_seen_at": _iso(job.first_seen_at),
         "is_active": bool(job.is_active),
         "is_duplicate": job.duplicate_of is not None,
+        "visibility": getattr(job, "visibility", None) or "public",
         "skills": job.skills or [],
     }
 
@@ -101,7 +103,10 @@ def build_bool_query(
     posted_after: datetime | None = None,
     include_duplicates: bool = False,
 ) -> dict[str, Any]:
-    filters: list[dict] = [{"term": {"is_active": True}}]
+    filters: list[dict] = [
+        {"term": {"is_active": True}},
+        {"term": {"visibility": "public"}},
+    ]
     if not include_duplicates:
         filters.append({"term": {"is_duplicate": False}})
 

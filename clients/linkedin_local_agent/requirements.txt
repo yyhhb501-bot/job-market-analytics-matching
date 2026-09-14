@@ -1,0 +1,3 @@
+# Local-collector-only dependencies (never installed in the server image).
+selenium>=4.20
+httpx>=0.27

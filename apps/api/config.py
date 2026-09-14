@@ -29,6 +29,16 @@ class Settings(BaseSettings):
     rate_limit_per_minute: int = 60
     match_rate_limit_per_minute: int = 10
 
+    # Local-collector import gateway. Jobs uploaded by user devices are stored
+    # private to that device and excluded from public search/stats.
+    enable_import_gateway: bool = True
+
+    # Observability: Prometheus scrape endpoint at /metrics.
+    enable_metrics: bool = True
+    # Rate limiting backend: "memory" (per-process), "redis" (shared across
+    # replicas) or "auto" (Redis when reachable, otherwise memory).
+    rate_limit_backend: str = "auto"
+
     # Collector toggles. Anything rate-limited or ToS-sensitive stays off.
     enable_ats: bool = True
     enable_usajobs: bool = False

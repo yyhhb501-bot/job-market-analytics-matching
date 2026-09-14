@@ -1,0 +1,32 @@
+# Reverse proxy for the production stack. Only Caddy publishes 80/443; the API
+# and web containers stay on the internal network.
+#
+# PUBLIC_DOMAIN is injected by compose (e.g. app.example.com). For local testing
+# set PUBLIC_DOMAIN=localhost and Caddy serves plain HTTP on :80.
+
+{$PUBLIC_DOMAIN} {
+	encode gzip zstd
+
+	# API surface (search, import gateway, docs, health, metrics).
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+	handle /health {
+		reverse_proxy api:8000
+	}
+	# Scrape endpoint: restrict at the network/firewall layer in production.
+	handle /metrics {
+		reverse_proxy api:8000
+	}
+	handle /docs {
+		reverse_proxy api:8000
+	}
+	handle /openapi.json {
+		reverse_proxy api:8000
+	}
+
+	# Everything else is the Next.js app.
+	handle {
+		reverse_proxy web:3000
+	}
+}

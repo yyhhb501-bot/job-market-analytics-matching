@@ -63,11 +63,14 @@ def source_health(
     db: Session = Depends(get_db), limit: int = Query(default=5000, ge=1, le=20000)
 ) -> list[SourceHealthOut]:
     """Per-source health incl. success rate, zero-result streaks and drift."""
-    totals = dict(db.execute(select(Job.source, func.count()).group_by(Job.source)).all())
+    public = Job.visibility == "public"
+    totals = dict(
+        db.execute(select(Job.source, func.count()).where(public).group_by(Job.source)).all()
+    )
     actives = dict(
         db.execute(
             select(Job.source, func.count())
-            .where(Job.is_active.is_(True))
+            .where(Job.is_active.is_(True), public)
             .group_by(Job.source)
         ).all()
     )
@@ -75,7 +78,7 @@ def source_health(
     today_added = dict(
         db.execute(
             select(Job.source, func.count())
-            .where(today_col == func.current_date())
+            .where(today_col == func.current_date(), public)
             .group_by(Job.source)
         ).all()
     )

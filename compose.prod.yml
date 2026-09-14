@@ -1,21 +1,53 @@
-# Production stack: built images, no bind mounts, no reload, internal-only data
-# services, non-root containers. Copy `.env.example` to `.env.prod` first and
-# set POSTGRES_PASSWORD, API_KEY, SECRET values, CORS_ORIGINS, etc.
+# Production stack: built images, no bind mounts, internal-only data services,
+# non-root containers. Copy `.env.prod.example` to `.env.prod` and fill it in.
 #
-#   docker compose -f compose.prod.yml up -d --build
+#   docker compose -f compose.prod.yml --env-file .env.prod build
+#   docker compose -f compose.prod.yml --env-file .env.prod up -d
 #
-# Data services are NOT published to the host; only api (8000) and web (3000).
+# Only Caddy publishes ports (80/443). Postgres/Redis/OpenSearch/API/Web are
+# reachable on the internal network only. Migrations run once via the `migrate`
+# service before the API starts, and the API refuses to boot with unsafe
+# production settings (see apps/api/config.check_production_settings).
+x-app-env: &app-env
+  ENVIRONMENT: production
+  DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-jobuser}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}@postgres:5432/${POSTGRES_DB:-jobs}
+  REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD required}@redis:6379/0
+  SEARCH_BACKEND: ${SEARCH_BACKEND:-postgres}
+  OPENSEARCH_URL: ${OPENSEARCH_URL:-}
+
+x-app-security: &app-security
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  read_only: true
+  tmpfs:
+    - /tmp
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16.4-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-jobuser}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}
       POSTGRES_DB: ${POSTGRES_DB:-jobs}
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks: [jobnet]
     restart: unless-stopped
+    logging: *default-logging
+    stop_grace_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2g
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jobuser} -d ${POSTGRES_DB:-jobs}"]
       interval: 10s
@@ -23,17 +55,32 @@ services:
       retries: 10
 
   redis:
-    image: redis:7-alpine
+    image: redis:7.4-alpine
+    command:
+      - redis-server
+      - --requirepass
+      - ${REDIS_PASSWORD:?REDIS_PASSWORD required}
+      - --appendonly
+      - "yes"
+    volumes:
+      - redisdata:/data
     networks: [jobnet]
     restart: unless-stopped
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512m
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep PONG"]
       interval: 10s
       timeout: 5s
       retries: 10
 
   opensearch:
     image: opensearchproject/opensearch:2.17.1
+    profiles: ["search"]
     environment:
       discovery.type: single-node
       plugins.security.disabled: "true"
@@ -42,28 +89,49 @@ services:
       - osdata:/usr/share/opensearch/data
     networks: [jobnet]
     restart: unless-stopped
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  migrate:
+    image: jobseek-api:${IMAGE_TAG:-0.1.0}
+    command: ["alembic", "upgrade", "head"]
+    env_file: .env.prod
+    environment: *app-env
+    networks: [jobnet]
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging: *default-logging
 
   api:
     build:
       context: .
       dockerfile: Dockerfile
-    image: jobseek-api:latest
-    command: uvicorn apps.api.main:app --host 0.0.0.0 --port 8000 --workers 2
+    image: jobseek-api:${IMAGE_TAG:-0.1.0}
+    command: uvicorn apps.api.main:app --host 0.0.0.0 --port 8000 --workers 2 --timeout-graceful-shutdown 30
     env_file: .env.prod
-    environment:
-      ENVIRONMENT: production
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-jobuser}:${POSTGRES_PASSWORD:-}@postgres:5432/${POSTGRES_DB:-jobs}
-      REDIS_URL: redis://redis:6379/0
-      OPENSEARCH_URL: http://opensearch:9200
-    ports:
-      - "8000:8000"
+    environment: *app-env
     networks: [jobnet]
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     restart: unless-stopped
+    logging: *default-logging
+    stop_grace_period: 30s
+    <<: *app-security
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1g
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
       interval: 15s
@@ -71,54 +139,96 @@ services:
       retries: 10
 
   worker:
-    image: jobseek-api:latest
+    image: jobseek-api:${IMAGE_TAG:-0.1.0}
     command: celery -A apps.worker.celery_app worker --loglevel=info --concurrency=2
     env_file: .env.prod
-    environment:
-      ENVIRONMENT: production
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-jobuser}:${POSTGRES_PASSWORD:-}@postgres:5432/${POSTGRES_DB:-jobs}
-      REDIS_URL: redis://redis:6379/0
-      OPENSEARCH_URL: http://opensearch:9200
+    environment: *app-env
     networks: [jobnet]
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     restart: unless-stopped
+    logging: *default-logging
+    stop_grace_period: 60s
+    <<: *app-security
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1g
 
   beat:
-    image: jobseek-api:latest
-    command: celery -A apps.worker.celery_app beat --loglevel=info
+    image: jobseek-api:${IMAGE_TAG:-0.1.0}
+    command: celery -A apps.worker.celery_app beat --loglevel=info --schedule /app/beat/celerybeat-schedule
     env_file: .env.prod
-    environment:
-      ENVIRONMENT: production
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-jobuser}:${POSTGRES_PASSWORD:-}@postgres:5432/${POSTGRES_DB:-jobs}
-      REDIS_URL: redis://redis:6379/0
-      OPENSEARCH_URL: http://opensearch:9200
+    environment: *app-env
+    volumes:
+      - beatschedule:/app/beat
     networks: [jobnet]
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     restart: unless-stopped
+    logging: *default-logging
+    stop_grace_period: 30s
+    <<: *app-security
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512m
 
   web:
     build:
       context: ./apps/web
       dockerfile: Dockerfile
+    image: jobseek-web:${IMAGE_TAG:-0.1.0}
     environment:
       NODE_ENV: production
       API_BASE_URL: http://api:8000
       API_KEY: ${API_KEY:-}
-      NEXT_PUBLIC_API_BASE_URL: ${PUBLIC_API_URL:-http://localhost:8000}
+      NEXT_PUBLIC_API_BASE_URL: ${PUBLIC_API_URL:-https://${PUBLIC_DOMAIN:-localhost}}
+    networks: [jobnet]
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1g
+
+  caddy:
+    image: caddy:2.8-alpine
+    environment:
+      PUBLIC_DOMAIN: ${PUBLIC_DOMAIN:-localhost}
     ports:
-      - "3000:3000"
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
     networks: [jobnet]
     depends_on:
       - api
+      - web
     restart: unless-stopped
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256m
 
 networks:
   jobnet:
@@ -126,4 +236,8 @@ networks:
 
 volumes:
   pgdata:
+  redisdata:
   osdata:
+  caddy_data:
+  caddy_config:
+  beatschedule:

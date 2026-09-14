@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from apps.api.boards import load_runtime_boards
 from apps.api.config import get_settings
+from apps.api.metrics import record_run
 from apps.api.models import CollectorRun, Job
 from collectors.ats_adapters.config import set_runtime_boards
 from collectors.base import BaseCollector, SearchParams
@@ -89,14 +90,45 @@ def _job_fields(job: NormalizedJob, hashes: dict) -> dict:
     }
 
 
-def persist_job(session: Session, job: NormalizedJob, run_id: int | None = None) -> str:
-    """Upsert one job. Returns ``inserted`` | ``updated`` | ``duplicate``."""
+def _owner_identity_condition(owner_device_id: int | None):
+    """Exact dedup scope: public rows (NULL owner) or one device's private rows."""
+    if owner_device_id is None:
+        return Job.owner_device_id.is_(None)
+    return Job.owner_device_id == owner_device_id
+
+
+def _owner_match_condition(owner_device_id: int | None):
+    """Cross-post dedup scope: public rows plus the importing device's own rows."""
+    if owner_device_id is None:
+        return Job.owner_device_id.is_(None)
+    return or_(Job.owner_device_id.is_(None), Job.owner_device_id == owner_device_id)
+
+
+def persist_job_row(
+    session: Session,
+    job: NormalizedJob,
+    run_id: int | None = None,
+    *,
+    visibility: str = "public",
+    collection_mode: str = "platform",
+    owner_device_id: int | None = None,
+) -> tuple[str, Job]:
+    """Upsert one job and return ``(action, row)``.
+
+    ``action`` is ``inserted`` | ``updated`` | ``duplicate``. Private imports
+    dedup only against public rows and the same device's rows, never against
+    another device's private data.
+    """
     hashes = compute_hashes(job)
     now = _utcnow()
 
-    # Layer 1: exact (source, source_job_id)
+    # Layer 1: exact (source, source_job_id) within the owner scope
     existing = session.scalar(
-        select(Job).where(Job.source == job.source, Job.source_job_id == job.source_job_id)
+        select(Job).where(
+            Job.source == job.source,
+            Job.source_job_id == job.source_job_id,
+            _owner_identity_condition(owner_device_id),
+        )
     )
     if existing is not None:
         if existing.content_hash != hashes["content_hash"]:
@@ -110,20 +142,26 @@ def persist_job(session: Session, job: NormalizedJob, run_id: int | None = None)
         existing.last_seen_run_id = run_id
         existing.missing_runs = 0
         session.flush()
-        return "updated"
+        return "updated", existing
 
     # Layers 2 & 3: same posting via a different link / cross-posted elsewhere
+    match_scope = _owner_match_condition(owner_device_id)
     match = None
     if hashes["canonical_url_hash"]:
         match = session.scalar(
             select(Job).where(
                 Job.canonical_url_hash == hashes["canonical_url_hash"],
                 Job.duplicate_of.is_(None),
+                match_scope,
             )
         )
     if match is None and hashes["dedup_key"]:
         match = session.scalar(
-            select(Job).where(Job.dedup_key == hashes["dedup_key"], Job.duplicate_of.is_(None))
+            select(Job).where(
+                Job.dedup_key == hashes["dedup_key"],
+                Job.duplicate_of.is_(None),
+                match_scope,
+            )
         )
 
     if match is not None and match.content_hash == hashes["content_hash"]:
@@ -134,7 +172,7 @@ def persist_job(session: Session, job: NormalizedJob, run_id: int | None = None)
         match.last_seen_run_id = run_id
         match.missing_runs = 0
         session.flush()
-        return "duplicate"
+        return "duplicate", match
 
     row = Job(
         source=job.source,
@@ -145,11 +183,39 @@ def persist_job(session: Session, job: NormalizedJob, run_id: int | None = None)
         is_active=True,
         last_seen_run_id=run_id,
         missing_runs=0,
+        visibility=visibility,
+        collection_mode=collection_mode,
+        owner_device_id=owner_device_id,
         **_job_fields(job, hashes),
     )
     session.add(row)
     session.flush()
-    return "duplicate" if row.duplicate_of is not None else "inserted"
+    return ("duplicate" if row.duplicate_of is not None else "inserted"), row
+
+
+def persist_job(
+    session: Session,
+    job: NormalizedJob,
+    run_id: int | None = None,
+    **kwargs,
+) -> str:
+    """Upsert one job. Returns ``inserted`` | ``updated`` | ``duplicate``."""
+    return persist_job_row(session, job, run_id, **kwargs)[0]
+
+
+def persist_job_row_safe(
+    session: Session, job: NormalizedJob, run_id: int | None = None, **kwargs
+) -> tuple[str, Job]:
+    """Savepoint-wrapped :func:`persist_job_row`; survives concurrent inserts."""
+    try:
+        with session.begin_nested():
+            return persist_job_row(session, job, run_id, **kwargs)
+    except IntegrityError:
+        # Another worker inserted the same job between our SELECT and INSERT;
+        # retry once so layer-2/3 dedup can attach it as a duplicate. The retry
+        # gets its own savepoint so a second failure leaves the session usable.
+        with session.begin_nested():
+            return persist_job_row(session, job, run_id, **kwargs)
 
 
 def persist_job_safe(session: Session, job: NormalizedJob, run_id: int | None = None) -> str:
@@ -162,8 +228,10 @@ def persist_job_safe(session: Session, job: NormalizedJob, run_id: int | None = 
             return persist_job(session, job, run_id)
     except IntegrityError:
         # Another worker inserted the same job between our SELECT and INSERT;
-        # retry once so layer-2/3 dedup can attach it as a duplicate.
-        return persist_job(session, job, run_id)
+        # retry once so layer-2/3 dedup can attach it as a duplicate. The retry
+        # gets its own savepoint so a second failure leaves the session usable.
+        with session.begin_nested():
+            return persist_job(session, job, run_id)
 
 
 def apply_missing_sweep(
@@ -268,6 +336,7 @@ async def run_collector(
             stats.error = f"{type(exc).__name__}: {exc}"
             logger.exception("collector %s failed", collector.name)
             _finish_run(session, run_id, "error", stats)
+    record_run(collector.name, "error" if stats.error else "success", stats.as_dict())
     logger.info("collector %s done: %s", collector.name, stats.as_dict())
     return stats
 
