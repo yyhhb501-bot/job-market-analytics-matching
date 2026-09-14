@@ -1,5 +1,12 @@
-import { getRuns, getRunsSummary, type CollectorRun, type RunsSummary } from "@/lib/api";
-import { formatDate } from "@/lib/format";
+import {
+  getRuns,
+  getRunsSummary,
+  getSourceHealth,
+  type CollectorRun,
+  type RunsSummary,
+  type SourceHealth,
+} from "@/lib/api";
+import { formatDate, labelSource } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -17,10 +24,15 @@ function statusLabel(status: string | null | undefined): string {
 export default async function StatusPage() {
   let runs: CollectorRun[] = [];
   let summary: RunsSummary | null = null;
+  let health: SourceHealth[] = [];
   let error: string | null = null;
 
   try {
-    [runs, summary] = await Promise.all([getRuns(50), getRunsSummary()]);
+    [runs, summary, health] = await Promise.all([
+      getRuns(50),
+      getRunsSummary(),
+      getSourceHealth(),
+    ]);
   } catch (cause) {
     error = cause instanceof Error ? cause.message : "无法连接 API";
   }
@@ -57,6 +69,44 @@ export default async function StatusPage() {
       ) : (
         !error && <p className="empty">暂无采集运行记录。</p>
       )}
+
+      {health.length > 0 ? (
+        <>
+          <h2 className="section-title">来源健康</h2>
+          <div className="table-wrap">
+            <table className="runs-table">
+              <thead>
+                <tr>
+                  <th>来源</th>
+                  <th>成功率</th>
+                  <th>上次状态</th>
+                  <th>上次岗位数</th>
+                  <th>连续空结果</th>
+                  <th>今日新增</th>
+                  <th>活跃/总数</th>
+                  <th>异常</th>
+                </tr>
+              </thead>
+              <tbody>
+                {health.map((row) => (
+                  <tr key={row.source}>
+                    <td>{labelSource(row.source)}</td>
+                    <td>{Math.round(row.success_rate * 100)}%</td>
+                    <td>{statusLabel(row.last_status)}</td>
+                    <td>{row.last_job_count}</td>
+                    <td>{row.consecutive_zero_runs}</td>
+                    <td>{row.jobs_added_today}</td>
+                    <td>
+                      {row.jobs_active}/{row.jobs_total}
+                    </td>
+                    <td className="error-cell">{row.schema_drift ? "疑似解析失效" : ""}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : null}
 
       {runs.length > 0 ? (
         <>

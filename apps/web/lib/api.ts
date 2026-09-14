@@ -126,6 +126,95 @@ export function getStats(): Promise<Stats> {
   return getJson<Stats>("/api/v1/stats");
 }
 
+export type Board = {
+  id: number;
+  provider: string;
+  board_token: string;
+  company_name: string | null;
+  company_domain: string | null;
+  country: string | null;
+  careers_url: string | null;
+  enabled: boolean;
+  discovery_source: string | null;
+  verified_at: string | null;
+  last_checked_at: string | null;
+  last_success_at: string | null;
+  last_job_count: number;
+  consecutive_failures: number;
+  discovered_at: string | null;
+};
+
+export type BoardCandidate = {
+  provider: string;
+  board_token: string;
+  careers_url: string | null;
+  config: Record<string, unknown> | null;
+  job_count: number | null;
+  verified: boolean;
+};
+
+export type SourceHealth = {
+  source: string;
+  runs: number;
+  successes: number;
+  errors: number;
+  success_rate: number;
+  last_status: string | null;
+  last_run_at: string | null;
+  last_job_count: number;
+  consecutive_zero_runs: number;
+  jobs_total: number;
+  jobs_active: number;
+  jobs_added_today: number;
+  schema_drift: boolean;
+};
+
+export function getBoards(params: { provider?: string; enabled?: boolean; q?: string } = {}): Promise<Board[]> {
+  const search = new URLSearchParams();
+  if (params.provider) search.set("provider", params.provider);
+  if (params.enabled !== undefined) search.set("enabled", String(params.enabled));
+  if (params.q) search.set("q", params.q);
+  const suffix = search.toString();
+  return getJson<Board[]>(`/api/v1/boards${suffix ? `?${suffix}` : ""}`);
+}
+
+export function getSourceHealth(): Promise<SourceHealth[]> {
+  return getJson<SourceHealth[]>("/api/v1/health/sources");
+}
+
+export function discoverBoards(domain: string, create: boolean): Promise<BoardCandidate[]> {
+  return clientJson<BoardCandidate[]>("/api/proxy/boards/discover", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ domain, create }),
+  });
+}
+
+export function createBoard(payload: {
+  provider: string;
+  board_token: string;
+  company_name?: string | null;
+  verify?: boolean;
+}): Promise<Board> {
+  return clientJson<Board>("/api/proxy/boards", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function verifyBoard(id: number): Promise<Board> {
+  return clientJson<Board>(`/api/proxy/boards/${id}/verify`, { method: "POST" });
+}
+
+export function setBoardEnabled(id: number, enabled: boolean): Promise<Board> {
+  return clientJson<Board>(`/api/proxy/boards/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ enabled }),
+  });
+}
+
 export type CompareAreaMetrics = {
   label: string;
   active_jobs: number;

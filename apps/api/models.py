@@ -154,6 +154,39 @@ class CollectorRun(Base):
     finished_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class Board(Base):
+    """A public ATS board/company to poll.
+
+    Replaces relying solely on ``config/ats_companies.json`` so boards can be
+    discovered, verified, paused and managed at runtime.
+    """
+
+    __tablename__ = "boards"
+
+    id: Mapped[int] = mapped_column(bigint_pk(), primary_key=True, autoincrement=True)
+    provider: Mapped[str] = mapped_column(String(40), index=True)
+    board_token: Mapped[str] = mapped_column(String(255))
+    company_name: Mapped[str | None] = mapped_column(String(255))
+    company_domain: Mapped[str | None] = mapped_column(String(255), index=True)
+    country: Mapped[str | None] = mapped_column(String(2), index=True)
+    careers_url: Mapped[str | None] = mapped_column(Text)
+    config: Mapped[dict | None] = mapped_column(json_type())
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    discovery_source: Mapped[str | None] = mapped_column(String(30))
+    verified_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    last_checked_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    last_success_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    last_job_count: Mapped[int] = mapped_column(Integer, default=0)
+    consecutive_failures: Mapped[int] = mapped_column(Integer, default=0)
+    discovered_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("provider", "board_token", name="uq_boards_provider_token"),
+    )
+
+
 class SavedSearch(Base):
     """A stored filter set that can be re-run to surface newly seen jobs."""
 

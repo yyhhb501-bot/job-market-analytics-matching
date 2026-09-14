@@ -95,6 +95,26 @@ def test_expand_collector_specs_multi_keyword(monkeypatch):
     assert jobspy_keywords == ["nurse", "nurse", "teacher", "teacher"]
 
 
+def test_expand_applies_per_source_result_overrides(monkeypatch):
+    from apps.api.config import Settings
+    from apps.worker import tasks
+
+    monkeypatch.setattr(
+        tasks, "enabled_source_names", lambda settings: ["greenhouse", "jobspy"]
+    )
+    settings = Settings(
+        collect_results=100,
+        collect_results_overrides='{"jobspy": 300}',
+        collect_keywords="nurse",
+        collect_country="US",
+    )
+    specs = tasks.expand_collector_specs(settings)
+    jobspy = [spec for name, spec in specs if name == "jobspy"]
+    assert jobspy and all(spec["results_wanted"] == 300 for spec in jobspy)
+    greenhouse = next(spec for name, spec in specs if name == "greenhouse")
+    assert greenhouse["results_wanted"] == 100
+
+
 def test_celery_tasks_registered():
     from apps.worker.celery_app import celery_app
 

@@ -28,6 +28,26 @@ def test_runs_list_and_summary(client, session):
     assert by_source["greenhouse"]["last_status"] == "success"
 
 
+def test_source_health_flags_drift(client, session):
+    session.add_all(
+        [
+            CollectorRun(source="seek", status="success", jobs_seen=10),
+            CollectorRun(source="seek", status="success", jobs_seen=0),
+            CollectorRun(source="seek", status="success", jobs_seen=0),
+            CollectorRun(source="seek", status="success", jobs_seen=0),
+        ]
+    )
+    session.commit()
+
+    health = client.get("/api/v1/health/sources").json()
+    row = next(item for item in health if item["source"] == "seek")
+    assert row["runs"] == 4
+    assert row["successes"] == 4
+    assert row["consecutive_zero_runs"] == 3
+    assert row["last_job_count"] == 0
+    assert row["schema_drift"] is True
+
+
 def test_runs_filter_by_source(client, session):
     session.add(CollectorRun(source="seek", status="success"))
     session.commit()

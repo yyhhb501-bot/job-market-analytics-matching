@@ -11,7 +11,7 @@ import logging
 from datetime import timedelta
 from typing import Any
 
-from celery import chord
+from celery import chord, group
 from sqlalchemy import or_, select, update
 
 from apps.api.alerts import notify_saved_searches, run_active_saved_searches
@@ -23,6 +23,7 @@ from apps.worker.pipeline import run_collector
 from collectors.base import SearchParams
 from collectors.registry import build_collectors
 from packages.enrichment import classify_occupation, classify_seniority, enrich_job
+from packages.job_schema import ATS_SOURCES
 from packages.llm import build_chat_client, build_summary_prompt
 from packages.search import build_search_backend, job_to_document
 from packages.semantic import build_embedder, embed_text
@@ -74,24 +75,30 @@ def expand_collector_specs(
 
     specs: list[tuple[str, dict]] = [(name, base) for name in rest]
     keywords = [k.strip() for k in str(base.get("keywords") or "").split(",") if k.strip()]
-    if not keywords:
+    if keywords:
+        for name in search:
+            if name in COUNTRY_SOURCES:
+                countries = [
+                    c.strip() for c in str(base.get("country") or "").split(",") if c.strip()
+                ] or settings.country_list or [None]
+            else:
+                countries = [None]
+            for keyword in keywords:
+                for country in countries:
+                    spec = dict(base)
+                    spec["keywords"] = keyword
+                    if country:
+                        spec["country"] = country
+                    specs.append((name, spec))
+    else:
         specs += [(name, base) for name in search]
-        return specs
 
-    for name in search:
-        if name in COUNTRY_SOURCES:
-            countries = [
-                c.strip() for c in str(base.get("country") or "").split(",") if c.strip()
-            ] or settings.country_list or [None]
-        else:
-            countries = [None]
-        for keyword in keywords:
-            for country in countries:
-                spec = dict(base)
-                spec["keywords"] = keyword
-                if country:
-                    spec["country"] = country
-                specs.append((name, spec))
+    overrides = getattr(settings, "results_override_map", {})
+    if overrides:
+        specs = [
+            (name, {**spec, "results_wanted": overrides[name]} if name in overrides else spec)
+            for name, spec in specs
+        ]
     return specs
 
 
@@ -315,8 +322,40 @@ def collect_all(params: dict | None = None) -> dict:
     }
 
 
+@celery_app.task(name="jobagg.collect_scope")
+def collect_scope(scope: str = "all") -> dict:
+    """Run a subset of collectors: ``ats`` (boards), ``hot`` (hot keywords)."""
+    settings = get_settings()
+    names = enabled_source_names(settings)
+    if scope == "ats":
+        specs = [(name, default_params(settings)) for name in names if name in ATS_SOURCES]
+    elif scope == "hot":
+        params = default_params(settings)
+        params["keywords"] = settings.collect_hot_keywords
+        hot = [name for name in names if name in SEARCH_SOURCES]
+        specs = expand_collector_specs(settings, params, only_names=hot)
+    else:
+        specs = expand_collector_specs(settings)
+
+    if not specs:
+        return {"scope": scope, "dispatched": 0}
+    header = [collect_source.s(name, spec) for name, spec in specs]
+    result = group(header).apply_async()
+    return {"scope": scope, "dispatched": len(specs), "group_id": getattr(result, "id", None)}
+
+
+@celery_app.task(name="jobagg.verify_boards")
+def verify_boards() -> dict:
+    from apps.api.boards import verify_all_boards
+
+    settings = get_settings()
+    with get_session_factory()() as session:
+        return asyncio.run(verify_all_boards(session, settings))
+
+
 __all__ = [
     "collect_all",
+    "collect_scope",
     "collect_source",
     "collect_source_sync",
     "daily_digest",
@@ -334,4 +373,5 @@ __all__ = [
     "reindex_jobs_sync",
     "sweep_stale_jobs",
     "sweep_stale_jobs_sync",
+    "verify_boards",
 ]

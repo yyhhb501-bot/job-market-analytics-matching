@@ -72,6 +72,12 @@ class Settings(BaseSettings):
     collect_results: int = 100
     # JobSpy sites used by keyword search (comma-separated).
     collect_sites: str = "indeed,google"
+    # Per-source result caps, e.g. {"jobspy": 300, "adzuna": 500}.
+    collect_results_overrides: str = ""
+    # Hot occupations re-collected more frequently than the daily run.
+    collect_hot_keywords: str | None = None
+    collect_hot_interval_hours: int = 3
+    ats_interval_hours: int = 6
 
     # FX: rates are "value of 1 unit in the base currency" (USD by default).
     fx_base_currency: str = "USD"
@@ -136,6 +142,24 @@ class Settings(BaseSettings):
     opensearch_username: str | None = None
     opensearch_password: str | None = None
     opensearch_timeout_seconds: float = 10.0
+
+    @property
+    def results_override_map(self) -> dict[str, int]:
+        import json
+
+        if not self.collect_results_overrides:
+            return {}
+        try:
+            data = json.loads(self.collect_results_overrides)
+        except (json.JSONDecodeError, TypeError):
+            return {}
+        if not isinstance(data, dict):
+            return {}
+        return {
+            str(key): int(value)
+            for key, value in data.items()
+            if isinstance(value, (int, float)) and value > 0
+        }
 
     @property
     def fx_rate_map(self) -> dict[str, float]:

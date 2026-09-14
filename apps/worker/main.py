@@ -295,6 +295,68 @@ def _cmd_seed_demo(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_boards_import(args: argparse.Namespace) -> int:
+    from apps.api.boards import import_boards_from_json
+
+    settings = get_settings()
+    with get_session_factory()() as session:
+        created = import_boards_from_json(session, settings)
+    logger.info("imported %s boards from %s", created, settings.ats_companies_file)
+    return 0
+
+
+def _cmd_boards_verify(args: argparse.Namespace) -> int:
+    from apps.api.boards import verify_all_boards
+
+    settings = get_settings()
+    with get_session_factory()() as session:
+        result = asyncio.run(verify_all_boards(session, settings))
+    logger.info("boards verify: %s", result)
+    return 0
+
+
+def _cmd_discover(args: argparse.Namespace) -> int:
+    from sqlalchemy import select
+
+    from apps.api.boards import discover_and_verify
+    from apps.api.models import Board
+
+    settings = get_settings()
+    with get_session_factory()() as session:
+        results = asyncio.run(discover_and_verify(args.domain, settings))
+        created = 0
+        for candidate in results:
+            logger.info(
+                "  %s/%s jobs=%s verified=%s",
+                candidate["provider"],
+                candidate["board_token"],
+                candidate.get("job_count"),
+                candidate.get("verified"),
+            )
+            if args.create and candidate.get("verified"):
+                exists = session.scalar(
+                    select(Board).where(
+                        Board.provider == candidate["provider"],
+                        Board.board_token == candidate["board_token"],
+                    )
+                )
+                if exists is None:
+                    session.add(
+                        Board(
+                            provider=candidate["provider"],
+                            board_token=candidate["board_token"],
+                            careers_url=candidate.get("careers_url"),
+                            config=candidate.get("config") or {},
+                            enabled=True,
+                            discovery_source="discover",
+                        )
+                    )
+                    created += 1
+        session.commit()
+    logger.info("discovered %s candidate(s), created %s", len(results), created)
+    return 0
+
+
 def _cmd_sweep(args: argparse.Namespace) -> int:
     from apps.worker.tasks import sweep_stale_jobs_sync
 
@@ -398,6 +460,19 @@ def build_parser() -> argparse.ArgumentParser:
 
     seed_demo = sub.add_parser("seed-demo", help="insert sample jobs for previewing the UI")
     seed_demo.set_defaults(func=_cmd_seed_demo)
+
+    boards_import = sub.add_parser(
+        "boards-import", help="import config/ats_companies.json into the boards table"
+    )
+    boards_import.set_defaults(func=_cmd_boards_import)
+
+    boards_verify = sub.add_parser("boards-verify", help="verify all boards and update status")
+    boards_verify.set_defaults(func=_cmd_boards_verify)
+
+    discover = sub.add_parser("discover", help="discover ATS boards for a company domain")
+    discover.add_argument("--domain", required=True)
+    discover.add_argument("--create", action="store_true")
+    discover.set_defaults(func=_cmd_discover)
 
     sweep = sub.add_parser("sweep", help="mark stale jobs inactive")
     sweep.add_argument("--days", type=int, default=None)

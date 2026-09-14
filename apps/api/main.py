@@ -9,7 +9,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from apps.api.config import check_production_settings, get_settings
-from apps.api.routers import compare, export, health, jobs, match, runs, saved_searches
+from apps.api.routers import (
+    boards,
+    compare,
+    export,
+    health,
+    jobs,
+    match,
+    runs,
+    saved_searches,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("jobagg.api")
@@ -56,6 +65,7 @@ app.include_router(saved_searches.router, prefix="/api/v1")
 app.include_router(match.router, prefix="/api/v1")
 app.include_router(runs.router, prefix="/api/v1")
 app.include_router(compare.router, prefix="/api/v1")
+app.include_router(boards.router, prefix="/api/v1")
 
 
 @app.get("/", include_in_schema=False)

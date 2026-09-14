@@ -64,6 +64,24 @@ beat_schedule["daily-sweep"] = {
     "task": "jobagg.sweep_stale",
     "schedule": crontab(minute=0, hour=(settings.digest_hour_utc + 1) % 24),
 }
+# ATS full-board snapshots run on their own cadence.
+beat_schedule["ats-collect"] = {
+    "task": "jobagg.collect_scope",
+    "schedule": timedelta(hours=max(settings.ats_interval_hours, 1)),
+    "args": ("ats",),
+}
+# Hot occupations refresh more often than the daily full run.
+if settings.collect_hot_keywords:
+    beat_schedule["hot-collect"] = {
+        "task": "jobagg.collect_scope",
+        "schedule": timedelta(hours=max(settings.collect_hot_interval_hours, 1)),
+        "args": ("hot",),
+    }
+# Re-verify boards daily so dead boards can be paused.
+beat_schedule["daily-verify-boards"] = {
+    "task": "jobagg.verify_boards",
+    "schedule": crontab(minute=0, hour=(settings.collect_hour - 1) % 24),
+}
 
 # Keep the OpenSearch index fresh when that backend is enabled.
 if str(settings.search_backend).lower() == "opensearch":

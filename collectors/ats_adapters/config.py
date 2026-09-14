@@ -20,8 +20,22 @@ def _resolve(path_str: str) -> Path:
     return path if path.is_absolute() else Path.cwd() / path
 
 
+# Runtime boards loaded from the ``boards`` table by the worker. When set for a
+# provider they take precedence over the static JSON config.
+_RUNTIME_BOARDS: dict[str, list[dict]] = {}
+
+
+def set_runtime_boards(boards: dict[str, list[dict]] | None) -> None:
+    """Install provider -> board entries for the current process."""
+    global _RUNTIME_BOARDS
+    _RUNTIME_BOARDS = boards or {}
+
+
 def load_board_entries(settings: Settings, key: str) -> list[dict]:
     """Return boards as dicts. A bare string becomes ``{"token": value}``."""
+    if _RUNTIME_BOARDS.get(key):
+        return list(_RUNTIME_BOARDS[key])
+
     path = _resolve(settings.ats_companies_file)
     if not path.exists():
         logger.warning("ATS companies file not found: %s", path)
@@ -45,4 +59,4 @@ def load_board_tokens(settings: Settings, key: str) -> list[str]:
     return [entry["token"] for entry in load_board_entries(settings, key) if entry.get("token")]
 
 
-__all__ = ["load_board_entries", "load_board_tokens"]
+__all__ = ["load_board_entries", "load_board_tokens", "set_runtime_boards"]

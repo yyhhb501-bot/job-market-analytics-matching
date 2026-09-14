@@ -25,6 +25,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <Link href="/compare">地区对比</Link>
               <Link href="/match">简历匹配</Link>
               <Link href="/alerts">告警</Link>
+              <Link href="/boards">公司看板</Link>
               <Link href="/status">运行状态</Link>
             </nav>
           </div>

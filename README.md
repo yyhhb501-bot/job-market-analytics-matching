@@ -200,6 +200,32 @@ sites (e.g. `indeed,google`).
 The APScheduler fallback (`python -m apps.worker.main schedule`) follows the
 same settings; `--interval-minutes N` forces interval mode.
 
+### Boards (company ATS) & health
+
+Companies are managed in a `boards` table rather than only the JSON file:
+
+```bash
+python -m apps.worker.main boards-import          # seed from config/ats_companies.json
+python -m apps.worker.main boards-verify          # check every board, update status/counts
+python -m apps.worker.main discover --domain stripe.com --create   # detect + add a company's ATS
+```
+
+During collection the worker loads enabled boards from the DB (`set_runtime_boards`),
+so added/paused boards take effect immediately. `GET /api/v1/boards` lists them,
+`POST /api/v1/boards`, `POST /api/v1/boards/discover`, `POST /api/v1/boards/{id}/verify`
+and `PATCH /api/v1/boards/{id}` manage them; the UI page `/boards` provides
+discovery + add.
+
+`GET /api/v1/health/sources` reports per-source success rate, last run/job count,
+consecutive zero-result runs, today's added jobs and a **schema-drift** flag
+(latest run returned 0 while history had results and it has been zero several
+times in a row). It powers the `/status` page.
+
+Collection cadence is split by scope: the daily `collect_all` (12:00) runs
+everything, `ats-collect` refreshes full boards every `ATS_INTERVAL_HOURS`, and
+`hot-collect` refreshes `COLLECT_HOT_KEYWORDS` every `COLLECT_HOT_INTERVAL_HOURS`.
+`COLLECT_RESULTS_OVERRIDES` sets per-source caps.
+
 Which companies to poll for ATS sources lives in
 [`config/ats_companies.json`](config/ats_companies.json). Entries are usually a
 board token string, but some providers take objects:

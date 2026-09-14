@@ -166,6 +166,61 @@ class RunsSummaryResponse(BaseModel):
     sources: list[SourceRunSummary]
 
 
+class BoardIn(BaseModel):
+    provider: str = Field(min_length=2, max_length=40)
+    board_token: str = Field(min_length=1, max_length=255)
+    company_name: str | None = None
+    company_domain: str | None = None
+    country: str | None = Field(default=None, max_length=2)
+    careers_url: str | None = None
+    config: dict | None = None
+    enabled: bool = True
+    verify: bool = False
+
+
+class BoardUpdate(BaseModel):
+    enabled: bool | None = None
+    company_name: str | None = None
+    company_domain: str | None = None
+    country: str | None = Field(default=None, max_length=2)
+    config: dict | None = None
+
+
+class BoardOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    provider: str
+    board_token: str
+    company_name: str | None = None
+    company_domain: str | None = None
+    country: str | None = None
+    careers_url: str | None = None
+    config: dict | None = None
+    enabled: bool
+    discovery_source: str | None = None
+    verified_at: datetime | None = None
+    last_checked_at: datetime | None = None
+    last_success_at: datetime | None = None
+    last_job_count: int
+    consecutive_failures: int
+    discovered_at: datetime | None = None
+
+
+class BoardCandidate(BaseModel):
+    provider: str
+    board_token: str
+    careers_url: str | None = None
+    config: dict | None = None
+    job_count: int | None = None
+    verified: bool = False
+
+
+class DiscoverRequest(BaseModel):
+    domain: str = Field(min_length=3, max_length=255)
+    create: bool = False
+
+
 class CompareAreaMetrics(BaseModel):
     label: str
     active_jobs: int
@@ -213,6 +268,22 @@ class LocationOut(BaseModel):
 class OccupationOut(BaseModel):
     occupation_group: str
     count: int
+
+
+class SourceHealthOut(BaseModel):
+    source: str
+    runs: int
+    successes: int
+    errors: int
+    success_rate: float
+    last_status: str | None = None
+    last_run_at: datetime | None = None
+    last_job_count: int
+    consecutive_zero_runs: int
+    jobs_total: int
+    jobs_active: int
+    jobs_added_today: int
+    schema_drift: bool = False
 
 
 class MatchRequest(BaseModel):

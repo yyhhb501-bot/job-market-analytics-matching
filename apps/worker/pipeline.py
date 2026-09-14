@@ -10,8 +10,10 @@ from sqlalchemy import or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
+from apps.api.boards import load_runtime_boards
 from apps.api.config import get_settings
 from apps.api.models import CollectorRun, Job
+from collectors.ats_adapters.config import set_runtime_boards
 from collectors.base import BaseCollector, SearchParams
 from packages.deduplication import compute_hashes
 from packages.enrichment import enrich_job
@@ -226,6 +228,7 @@ async def run_collector(
         session.commit()
         run_id = run.id
         try:
+            set_runtime_boards(load_runtime_boards(session))
             collector.validate()
             async for job in collector.stream(params):
                 stats.seen += 1

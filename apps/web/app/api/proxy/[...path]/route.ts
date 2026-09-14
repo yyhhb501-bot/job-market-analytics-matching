@@ -17,6 +17,10 @@ const RULES: { method: string; test: (path: string) => boolean }[] = [
   { method: "DELETE", test: (p) => /^saved-searches\/\d+$/.test(p) },
   { method: "POST", test: (p) => /^saved-searches\/\d+\/run$/.test(p) },
   { method: "POST", test: (p) => p === "match" },
+  { method: "POST", test: (p) => p === "boards" },
+  { method: "POST", test: (p) => p === "boards/discover" },
+  { method: "POST", test: (p) => /^boards\/\d+\/verify$/.test(p) },
+  { method: "PATCH", test: (p) => /^boards\/\d+$/.test(p) },
 ];
 
 async function handle(
