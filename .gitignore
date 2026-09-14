@@ -25,6 +25,9 @@ data/
 logs/
 out/
 backups/
+.preview-api.log
+.preview-api.err.log
+apps/web/.preview-web.log
 
 # Celery Beat runtime schedule (must not be committed; use a volume/RedBeat)
 celerybeat-schedule

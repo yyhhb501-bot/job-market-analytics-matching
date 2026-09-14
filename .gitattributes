@@ -1,0 +1,26 @@
+# Normalize all text files to LF in the repository and in working trees,
+# regardless of core.autocrlf on the checking-out machine.
+* text=auto eol=lf
+
+# Windows scripts must keep CRLF
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+
+# Binary assets — never normalize
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.pdf binary
+*.zip binary
+*.db binary
+*.sqlite3 binary
+celerybeat-schedule binary
+celerybeat-schedule-shm binary
+celerybeat-schedule-wal binary
+celerybeat-schedule-journal binary
