@@ -38,7 +38,7 @@ default and can be turned off per adapter.
 
 | Layer | Choice |
 |---|---|
-| Runtime | Python 3.11+ (developed on 3.13) |
+| Runtime | Python 3.11–3.12 (CI and Docker on 3.12) |
 | API | FastAPI + Pydantic v2 |
 | Ingestion | HTTPX (async) + `python-jobspy` |
 | Scheduling | Celery + Redis (APScheduler as a no-Redis fallback) |
@@ -114,16 +114,18 @@ Optional search backend: add `--profile search` to run OpenSearch and set
 
 ## Quick start (local preview)
 
+Python dependencies are locked with [uv](https://docs.astral.sh/uv/) (`uv.lock`).
+Install with uv (any Python between 3.11 and 3.12; CI and Docker use 3.12):
+
 ```bash
-python -m venv .venv
-.venv\Scripts\activate                    # Windows
-pip install -e ".[dev]"
+uv venv && uv sync --frozen --extra dev      # or: uv sync --extra dev to upgrade
+uv run --no-sync <command>                   # run inside the locked env
 
 # SQLite preview with sample data (no collectors, no Postgres needed)
 set DATABASE_URL=sqlite+pysqlite:///./.preview.db
 set AUTO_CREATE_TABLES=true
-python -m apps.worker.main seed-demo
-uvicorn apps.api.main:app --port 8010
+uv run --no-sync python -m apps.worker.main seed-demo
+uv run --no-sync uvicorn apps.api.main:app --port 8010
 
 # frontend (separate terminal)
 cd apps/web
@@ -137,12 +139,27 @@ The browser never holds the API key: client writes go through the Next.js
 proxy route (`app/api/proxy/[...path]`), which attaches the server-only
 `API_KEY`. See [SECURITY.md](SECURITY.md).
 
-Run tests (no database required):
+Run tests and checks:
 
 ```bash
+ruff check .                       # lint
+pytest -q                          # full suite (no database required)
+
+# Real-service integration tests (opt-in, skipped without these variables)
+set TEST_POSTGRES_URL=postgresql+psycopg://user:pass@localhost:5432/jobs
+set TEST_REDIS_URL=redis://localhost:6379/15
 pytest -q
-ruff check .
+
+# Frontend
+cd apps/web
+npm run lint                       # ESLint
+npm run typecheck                  # tsc --noEmit
+npm run test:e2e                   # Playwright: boots a seeded API + the web app
 ```
+
+`requirements.txt` is generated from `uv.lock`
+(`uv export --frozen --no-dev --no-emit-project -o requirements.txt`) and is
+what the Docker image installs — CI fails if it drifts from the lock.
 
 ## Worker CLI
 
@@ -575,7 +592,10 @@ route (`app/api/proxy/[...path]`) and never exposes it to the browser.
 
 All settings are environment variables (see [`.env.example`](.env.example)):
 authentication/abuse (`API_KEY`, `RATE_LIMIT_ENABLED`, `RATE_LIMIT_PER_MINUTE`,
-`MATCH_RATE_LIMIT_PER_MINUTE`), database/Redis URLs, collector toggles
+`MATCH_RATE_LIMIT_PER_MINUTE`, `RATE_LIMIT_BACKEND` — `memory`/`redis`/`auto`),
+database/Redis URLs, observability (`ENABLE_METRICS`, optional `METRICS_TOKEN`
+bearer for `/metrics`), the import gateway toggle (`ENABLE_IMPORT_GATEWAY`),
+collector toggles
 (`ENABLE_ATS`, `ENABLE_USAJOBS`,
 `ENABLE_JOBSPY`, `ENABLE_ADZUNA`, `ENABLE_REMOTEOK`, `ENABLE_SEEK`,
 `ENABLE_LINKEDIN`), USAJOBS/Adzuna credentials, the ATS board file, SMTP settings
@@ -610,11 +630,23 @@ HTTP timeout and the SEEK rate limit.
 
 ## Version control & CI
 
-Git is initialized with an initial commit, and GitHub Actions
-([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs:
+GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs on
+every push and pull request:
 
-- `ruff check .` and `pytest -q` (Python 3.13)
-- `npm ci && npm run typecheck && npm run build` (Node 22)
-- an Alembic `upgrade → downgrade base → upgrade` migration test against PostgreSQL
+- **backend** — `ruff check .` + `pytest -q` on the locked environment
+  (Python 3.12, `uv sync --frozen`), with `uv.lock` / `requirements.txt`
+  drift gates
+- **frontend** — `npm run lint`, `npm run typecheck`, `npm run build` (Node 22)
+- **e2e** — Playwright key user flows (search, job detail, saved searches,
+  comparison, status) against a seeded API and the production web build
+- **integration** — Postgres 16 + Redis 7 services: Alembic
+  `upgrade → downgrade base → upgrade`, then the full test suite with real
+  Postgres/Redis integration tests enabled
+- **security** — `pip-audit` (Python) and `npm audit --audit-level=high` (Node)
+- **image-scan** — builds both container images and scans them with Trivy
+  (report-only until the base-image baseline is triaged)
+- **prod-smoke** — validates `compose.prod.yml` with the fake-but-valid
+  [`ci/prod.env`](ci/prod.env) fixture, boots postgres + redis + migrations +
+  api from the production stack and asserts `/health` and `/metrics` respond
 
 Dependabot is configured for pip, npm, GitHub Actions and Docker.
