@@ -4,7 +4,7 @@ from apps.api.metrics import record_import, record_run
 from apps.api.ratelimit import RedisFixedWindowLimiter, SlidingWindowLimiter
 
 
-def test_metrics_endpoint_exposes_prometheus_format(client):
+def test_metrics_endpoint_open_without_token(client):
     client.get("/health")
     response = client.get("/metrics")
     assert response.status_code == 200
@@ -13,6 +13,17 @@ def test_metrics_endpoint_exposes_prometheus_format(client):
     assert "http_requests_total" in body
     assert "collector_runs_total" in body
     assert "job_freshness_seconds" in body
+
+
+def test_metrics_token_rejects_missing_or_wrong_credentials(client, settings_env):
+    with settings_env(METRICS_TOKEN="s3cret-token"):
+        assert client.get("/metrics").status_code == 401
+        assert (
+            client.get("/metrics", headers={"Authorization": "Bearer wrong"}).status_code == 401
+        )
+        ok = client.get("/metrics", headers={"Authorization": "Bearer s3cret-token"})
+        assert ok.status_code == 200
+        assert "http_requests_total" in ok.text
 
 
 def test_record_run_and_import_emit_samples(client):

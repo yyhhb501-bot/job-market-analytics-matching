@@ -35,6 +35,10 @@ class Settings(BaseSettings):
 
     # Observability: Prometheus scrape endpoint at /metrics.
     enable_metrics: bool = True
+    # Optional bearer token for /metrics. Unset keeps the endpoint open
+    # (e.g. scraped from an internal network); set it to require
+    # "Authorization: Bearer <token>" from the scraper.
+    metrics_token: str | None = None
     # Rate limiting backend: "memory" (per-process), "redis" (shared across
     # replicas) or "auto" (Redis when reachable, otherwise memory).
     rate_limit_backend: str = "auto"
