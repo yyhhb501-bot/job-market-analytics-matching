@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from apps.api.config import Settings
-from apps.api.models import SavedSearch
+from apps.api.models import SavedSearch, SourceAuthorization, utcnow
 from apps.worker import tasks
 from apps.worker.pipeline import persist_job
 from packages.job_schema import NormalizedJob
@@ -46,6 +46,15 @@ def test_evaluate_alerts_sync_sends_email(session_factory, session, monkeypatch)
             city="Sydney",
             country="AU",
         ),
+    )
+    session.add(
+        SourceAuthorization(
+            source="seek",
+            evidence_ref="test-license:tasks:seek",
+            approved=True,
+            commercial_display=True,
+            valid_from=utcnow(),
+        )
     )
     session.add(SavedSearch(name="AU jobs", country="AU", notify_email="me@example.com"))
     session.commit()
@@ -121,3 +130,21 @@ def test_celery_tasks_registered():
     assert "jobagg.collect_source" in celery_app.tasks
     assert "jobagg.collect_all" in celery_app.tasks
     assert "jobagg.evaluate_alerts" in celery_app.tasks
+
+
+def test_au_nurse_plan_only_selects_explicit_api_source(monkeypatch):
+    monkeypatch.setattr(tasks, "enabled_source_names", lambda settings: ["jobspy"])
+    source, params = tasks.au_nurse_plan_params(
+        Settings(au_nurse_plan_enabled=True, au_nurse_plan_sources="jobspy")
+    )
+    assert source is None
+    assert params is None
+
+    monkeypatch.setattr(tasks, "enabled_source_names", lambda settings: ["adzuna"])
+    source, params = tasks.au_nurse_plan_params(
+        Settings(au_nurse_plan_enabled=True, au_nurse_plan_sources="adzuna")
+    )
+    assert source == "adzuna"
+    assert params["country"] == "AU"
+    assert params["extra"]["plan"] == "au_nurse"
+    assert params["extra"]["nurse_only"] is True

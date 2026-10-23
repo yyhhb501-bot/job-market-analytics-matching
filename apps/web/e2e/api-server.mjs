@@ -28,6 +28,9 @@ const env = {
   RATE_LIMIT_ENABLED: "false",
   RATE_LIMIT_BACKEND: "memory",
   ENABLE_METRICS: "false",
+  // Write endpoints fail closed without a configured key; the web proxy
+  // attaches this same value server-side (see playwright.config.ts).
+  API_KEY: process.env.API_KEY || "e2e-api-key",
 };
 
 const seeded = spawnSync(

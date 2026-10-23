@@ -15,13 +15,19 @@ os.environ["AUTO_CREATE_TABLES"] = "false"
 os.environ["DATABASE_URL"] = "sqlite+pysqlite:///:memory:"
 # Keep rate-limit tests deterministic and independent of a local Redis.
 os.environ["RATE_LIMIT_BACKEND"] = "memory"
+# require_api_key fails closed when API_KEY is unset (503), so tests run with a
+# key configured and the client fixtures below attach it by default.
+os.environ["API_KEY"] = "test-api-key"
 
 import pytest  # noqa: E402
 from sqlalchemy import create_engine, text  # noqa: E402
 from sqlalchemy.orm import sessionmaker  # noqa: E402
 from sqlalchemy.pool import StaticPool  # noqa: E402
 
-from apps.api import models  # noqa: E402,F401  (register tables)
+from apps.api import (
+    membership_models,  # noqa: E402,F401  (register users foreign keys)
+    models,  # noqa: E402,F401  (register tables)
+)
 from apps.api.database import Base, get_db  # noqa: E402
 
 TEST_POSTGRES_URL = os.environ.get("TEST_POSTGRES_URL")
@@ -77,6 +83,7 @@ def client(session_factory):
 
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as test_client:
+        test_client.headers["X-API-Key"] = os.environ["API_KEY"]
         yield test_client
     app.dependency_overrides.clear()
 
@@ -162,6 +169,7 @@ def pg_client(pg_engine, pg_session_factory):
 
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as test_client:
+        test_client.headers["X-API-Key"] = os.environ["API_KEY"]
         yield test_client
     app.dependency_overrides.clear()
 

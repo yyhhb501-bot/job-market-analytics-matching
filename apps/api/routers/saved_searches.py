@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -18,20 +18,32 @@ from apps.api.schemas import (
     SavedSearchUpdate,
 )
 from apps.api.security import require_api_key
+from apps.api.source_authorization import public_job_condition
 
 router = APIRouter(prefix="/saved-searches", tags=["saved-searches"])
 
 
-def _get_or_404(session: Session, search_id: int) -> SavedSearch:
-    search = session.get(SavedSearch, search_id)
+def _get_or_404(
+    session: Session, search_id: int, owner_user_id: int | None = None
+) -> SavedSearch:
+    query = select(SavedSearch).where(SavedSearch.id == search_id)
+    if owner_user_id is not None:
+        query = query.where(SavedSearch.owner_user_id == owner_user_id)
+    search = session.scalar(query)
     if search is None:
         raise HTTPException(status_code=404, detail="saved search not found")
     return search
 
 
 @router.get("", response_model=list[SavedSearchOut], dependencies=[Depends(require_api_key)])
-def list_saved_searches(db: Session = Depends(get_db)) -> list[SavedSearch]:
-    return list(db.scalars(select(SavedSearch).order_by(SavedSearch.id.desc())).all())
+def list_saved_searches(
+    db: Session = Depends(get_db),
+    owner_user_id: int | None = Header(default=None, alias="X-Member-ID"),
+) -> list[SavedSearch]:
+    query = select(SavedSearch)
+    if owner_user_id is not None:
+        query = query.where(SavedSearch.owner_user_id == owner_user_id)
+    return list(db.scalars(query.order_by(SavedSearch.id.desc())).all())
 
 
 @router.post(
@@ -40,8 +52,13 @@ def list_saved_searches(db: Session = Depends(get_db)) -> list[SavedSearch]:
     status_code=201,
     dependencies=[Depends(require_api_key)],
 )
-def create_saved_search(payload: SavedSearchIn, db: Session = Depends(get_db)) -> SavedSearch:
+def create_saved_search(
+    payload: SavedSearchIn,
+    db: Session = Depends(get_db),
+    owner_user_id: int | None = Header(default=None, alias="X-Member-ID"),
+) -> SavedSearch:
     search = SavedSearch(**payload.model_dump())
+    search.owner_user_id = owner_user_id
     search.unsubscribe_token = generate_unsubscribe_token()
     db.add(search)
     db.commit()
@@ -62,17 +79,24 @@ def unsubscribe(token: str = Query(min_length=8), db: Session = Depends(get_db))
 @router.get(
     "/{search_id}", response_model=SavedSearchOut, dependencies=[Depends(require_api_key)]
 )
-def get_saved_search(search_id: int, db: Session = Depends(get_db)) -> SavedSearch:
-    return _get_or_404(db, search_id)
+def get_saved_search(
+    search_id: int,
+    db: Session = Depends(get_db),
+    owner_user_id: int | None = Header(default=None, alias="X-Member-ID"),
+) -> SavedSearch:
+    return _get_or_404(db, search_id, owner_user_id)
 
 
 @router.patch(
     "/{search_id}", response_model=SavedSearchOut, dependencies=[Depends(require_api_key)]
 )
 def update_saved_search(
-    search_id: int, payload: SavedSearchUpdate, db: Session = Depends(get_db)
+    search_id: int,
+    payload: SavedSearchUpdate,
+    db: Session = Depends(get_db),
+    owner_user_id: int | None = Header(default=None, alias="X-Member-ID"),
 ) -> SavedSearch:
-    search = _get_or_404(db, search_id)
+    search = _get_or_404(db, search_id, owner_user_id)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(search, field, value)
     db.commit()
@@ -81,8 +105,12 @@ def update_saved_search(
 
 
 @router.delete("/{search_id}", status_code=204, dependencies=[Depends(require_api_key)])
-def delete_saved_search(search_id: int, db: Session = Depends(get_db)) -> None:
-    _get_or_404(db, search_id)
+def delete_saved_search(
+    search_id: int,
+    db: Session = Depends(get_db),
+    owner_user_id: int | None = Header(default=None, alias="X-Member-ID"),
+) -> None:
+    _get_or_404(db, search_id, owner_user_id)
     db.query(SavedSearchMatch).filter(SavedSearchMatch.saved_search_id == search_id).delete()
     db.query(SavedSearch).filter(SavedSearch.id == search_id).delete()
     db.commit()
@@ -97,8 +125,9 @@ def run_saved_search(
     search_id: int,
     lookback_hours: int = Query(default=24, ge=0, le=24 * 30),
     db: Session = Depends(get_db),
+    owner_user_id: int | None = Header(default=None, alias="X-Member-ID"),
 ) -> SavedSearchRunResult:
-    search = _get_or_404(db, search_id)
+    search = _get_or_404(db, search_id, owner_user_id)
     result = evaluate_search(db, search, lookback_hours=lookback_hours)
     return SavedSearchRunResult(
         saved_search_id=search.id,
@@ -117,12 +146,13 @@ def list_matches(
     search_id: int,
     limit: int = Query(default=50, ge=1, le=200),
     db: Session = Depends(get_db),
+    owner_user_id: int | None = Header(default=None, alias="X-Member-ID"),
 ) -> list[JobOut]:
-    _get_or_404(db, search_id)
+    _get_or_404(db, search_id, owner_user_id)
     jobs = db.scalars(
         select(Job)
         .join(SavedSearchMatch, SavedSearchMatch.job_id == Job.id)
-        .where(SavedSearchMatch.saved_search_id == search_id, Job.visibility == "public")
+        .where(SavedSearchMatch.saved_search_id == search_id, public_job_condition())
         .order_by(SavedSearchMatch.matched_at.desc(), SavedSearchMatch.id.desc())
         .limit(limit)
     ).all()

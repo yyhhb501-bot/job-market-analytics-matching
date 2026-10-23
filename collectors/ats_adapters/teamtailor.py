@@ -16,7 +16,12 @@ import logging
 from collections.abc import AsyncIterator
 
 from collectors.ats_adapters.config import load_board_entries
-from collectors.base import BaseCollector, SearchParams
+from collectors.base import (
+    AccessBlockedError,
+    BaseCollector,
+    RateLimitedError,
+    SearchParams,
+)
 from collectors.utils import (
     country_from_name,
     infer_country,
@@ -73,15 +78,20 @@ class TeamtailorCollector(BaseCollector):
                 url: str | None = BASE_URL
                 first = True
                 while url and collected < params.results_wanted:
+                    if not await self._pre_request():
+                        return
                     try:
-                        response = await client.get(
+                        payload = await self._board_json(
+                            client,
                             url,
+                            board=token,
                             headers=headers,
                             params={"page[size]": 30} if first else None,
                         )
-                        response.raise_for_status()
-                        payload = response.json()
+                    except (RateLimitedError, AccessBlockedError):
+                        raise
                     except Exception as exc:  # noqa: BLE001
+                        self._note_board_failure(token, exc)
                         logger.warning("teamtailor: %s failed: %s", token, exc)
                         break
                     first = False
@@ -91,6 +101,7 @@ class TeamtailorCollector(BaseCollector):
                             yield job
                             collected += 1
                             if collected >= params.results_wanted:
+                                self._note_board_incomplete(token)
                                 break
                     url = (payload.get("links") or {}).get("next")
                     await asyncio.sleep(0.2)

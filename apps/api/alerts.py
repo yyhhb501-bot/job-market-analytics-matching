@@ -12,6 +12,7 @@ from apps.api.config import Settings
 from apps.api.filters import as_list, build_conditions
 from apps.api.mailer import is_email_configured, send_saved_search_alert
 from apps.api.models import Job, SavedSearch, SavedSearchMatch, utcnow
+from apps.api.source_authorization import public_job_condition
 from apps.api.webhooks import build_webhook_payload, send_webhook
 
 
@@ -77,7 +78,8 @@ def evaluate_search(session: Session, search: SavedSearch, lookback_hours: int =
         session.scalar(
             select(func.count())
             .select_from(SavedSearchMatch)
-            .where(SavedSearchMatch.saved_search_id == search.id)
+            .join(Job, Job.id == SavedSearchMatch.job_id)
+            .where(SavedSearchMatch.saved_search_id == search.id, public_job_condition())
         )
         or 0
     )
@@ -114,7 +116,7 @@ def _unnotified_jobs(session: Session, search: SavedSearch) -> list[Job]:
     statement = (
         select(Job)
         .join(SavedSearchMatch, SavedSearchMatch.job_id == Job.id)
-        .where(SavedSearchMatch.saved_search_id == search.id)
+        .where(SavedSearchMatch.saved_search_id == search.id, public_job_condition())
     )
     if search.last_notified_at is not None:
         statement = statement.where(SavedSearchMatch.matched_at > search.last_notified_at)
@@ -139,6 +141,11 @@ def notify_saved_searches(
             continue
         digest = search.frequency == "digest"
         jobs = _unnotified_jobs(session, search) if digest else row["new_jobs"]
+        ids = [job.id for job in jobs]
+        allowed = set(
+            session.scalars(select(Job.id).where(Job.id.in_(ids), public_job_condition())).all()
+        )
+        jobs = [job for job in jobs if job.id in allowed]
         if not jobs:
             continue
 

@@ -339,6 +339,7 @@ def test_cross_link_duplicate_attaches_within_owner_scope(pg_client):
 def _seed_public_job(pg_session):
     import datetime as dt
 
+    from apps.api.models import SourceAuthorization, utcnow
     from apps.worker.pipeline import persist_job
     from packages.job_schema import NormalizedJob
 
@@ -359,6 +360,15 @@ def _seed_public_job(pg_session):
             apply_url="https://example.com/jobs/pub-1",
             posted_at=dt.datetime.now(dt.UTC),
         ),
+    )
+    pg_session.add(
+        SourceAuthorization(
+            source="greenhouse",
+            evidence_ref="test-license:import-gateway-e2e:public-seed",
+            approved=True,
+            commercial_display=True,
+            valid_from=utcnow(),
+        )
     )
     pg_session.commit()
 

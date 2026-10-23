@@ -16,7 +16,7 @@ def board_entry(board: Any) -> dict:
     get = board.get if isinstance(board, dict) else lambda key, default=None: getattr(board, key, default)
     config = dict(get("config") or {})
     token = get("board_token")
-    entry: dict = {"token": token}
+    entry: dict = {"token": token, "board_id": get("id")}
     entry.update(config)
     if get("company_name"):
         entry.setdefault("company_name", get("company_name"))

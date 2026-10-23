@@ -69,6 +69,8 @@ export function SaveSearchForm({ values }: { values: Record<string, string> }) {
   }
 
   return (
+    <details className="save-search-shell">
+      <summary><span>保存搜索并接收新职位提醒</span><span>可选 · 邮箱或 Webhook</span></summary>
     <form className="save-search" onSubmit={onSubmit} data-testid="save-search-form">
       <div className="field field-grow">
         <label htmlFor="saved-name">保存此搜索</label>
@@ -139,6 +141,6 @@ export function SaveSearchForm({ values }: { values: Record<string, string> }) {
           {error}
         </p>
       ) : null}
-    </form>
+    </form></details>
   );
 }

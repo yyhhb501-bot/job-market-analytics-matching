@@ -27,6 +27,7 @@ from apps.api.schemas import (
     LocationOut,
     OccupationOut,
 )
+from apps.api.source_authorization import public_job_condition
 from packages.fx import convert
 
 router = APIRouter(tags=["compare"])
@@ -45,7 +46,7 @@ def _occupation_condition(q: str):
 def _area_conditions(
     q: str | None, country: str | None, state: str | None, city: str | None, dedup: bool
 ) -> list:
-    conditions = [Job.is_active.is_(True), Job.visibility == "public"]
+    conditions = [Job.is_active.is_(True), public_job_condition()]
     if dedup:
         conditions.append(Job.duplicate_of.is_(None))
     if q:
@@ -244,7 +245,7 @@ def compare(
         salary_diff = round(
             (area_b.salary_median - area_a.salary_median) / area_a.salary_median * 100, 1
         )
-    last_updated = db.scalar(select(func.max(Job.last_seen_at)))
+    last_updated = db.scalar(select(func.max(Job.last_seen_at)).where(public_job_condition()))
 
     return CompareResponse(
         occupation=q,
@@ -272,7 +273,7 @@ def locations(
 ) -> list[LocationOut]:
     statement = (
         select(Job.country, Job.state, Job.city, func.count().label("count"))
-        .where(Job.is_active.is_(True), Job.visibility == "public", Job.city.is_not(None))
+        .where(Job.is_active.is_(True), public_job_condition(), Job.city.is_not(None))
     )
     if country:
         statement = statement.where(Job.country == country.upper())
@@ -299,7 +300,7 @@ def occupations(
 ) -> list[OccupationOut]:
     statement = (
         select(Job.occupation_group, func.count().label("count"))
-        .where(Job.occupation_group.is_not(None), Job.visibility == "public")
+        .where(Job.occupation_group.is_not(None), public_job_condition())
     )
     if q:
         statement = statement.where(Job.occupation_group.ilike(f"%{q}%"))

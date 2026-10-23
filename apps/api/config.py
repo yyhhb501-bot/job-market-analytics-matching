@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     # Authentication: when API_KEY is set, write endpoints require it via the
     # X-API-Key header. Never deploy publicly without it.
     api_key: str | None = None
+    # Member phone verification. Provider credentials are server-only.
+    sms_provider: str = ""  # twilio | aliyun | empty disables phone registration
+    twilio_account_sid: str | None = None
+    twilio_auth_token: str | None = None
+    twilio_verify_service_sid: str | None = None
     rate_limit_enabled: bool = True
     rate_limit_per_minute: int = 60
     match_rate_limit_per_minute: int = 10
@@ -80,6 +85,9 @@ class Settings(BaseSettings):
     collect_hour: int = 12
     collect_minute: int = 0
     collect_interval_minutes: int = 60
+    nightly_import_enabled: bool = False
+    nightly_import_hour: int = 23
+    nightly_import_minute: int = 0
     collect_keywords: str | None = None
     collect_location: str | None = None
     collect_country: str | None = None
@@ -92,6 +100,22 @@ class Settings(BaseSettings):
     collect_hot_keywords: str | None = None
     collect_hot_interval_hours: int = 3
     ats_interval_hours: int = 6
+
+    # Separate Australia Registered Nurse plan. This is intentionally
+    # opt-in and only accepts explicitly configured API-backed sources (the
+    # default source is Adzuna). SEEK remains a user-triggered local import.
+    au_nurse_plan_enabled: bool = False
+    au_nurse_plan_interval_minutes: int = 60
+    au_nurse_plan_results_per_run: int = 20
+    au_nurse_plan_country: str = "AU"
+    au_nurse_plan_location: str = "Australia"
+    au_nurse_plan_sources: str = "adzuna"
+    au_nurse_plan_keywords: str = (
+        "Registered Nurse,RN,Clinical Nurse,Practice Nurse,Community Nurse,"
+        "Aged Care Registered Nurse,Mental Health Nurse,Theatre Nurse,"
+        "Emergency Nurse,ICU Nurse,Paediatric Nurse,Oncology Nurse,"
+        "Scrub Scout Nurse,Perioperative Nurse"
+    )
 
     # FX: rates are "value of 1 unit in the base currency" (USD by default).
     fx_base_currency: str = "USD"
@@ -194,6 +218,31 @@ class Settings(BaseSettings):
     http_timeout_seconds: float = 30.0
     seek_requests_per_minute: int = 10
     default_countries: str = "US,AU"
+
+    # Collection controls. Budgets are upper bounds on upstream access, never
+    # guarantees about platform tolerance: 0 means unlimited.
+    # Minimum spacing between upstream requests for every source (adapters
+    # may enforce a larger per-source minimum, e.g. SEEK's rate).
+    action_interval_seconds: float = 0.0
+    # Max upstream page/detail visits per source per day.
+    daily_page_visit_limit: int = 0
+    daily_detail_visit_limit: int = 0
+    # Hard wall-clock cap per run per source (minutes); 0 = unlimited.
+    max_run_minutes: int = 0
+    # Pause a source automatically when it hits a CAPTCHA/403/login wall
+    # (resume manually via the collector controls API).
+    pause_on_challenge: bool = True
+    # Honour a 429 response's Retry-After as the retry countdown.
+    respect_retry_after: bool = True
+
+    # Weekly unique-job target and per-source daily new-job targets. Targets
+    # are planning numbers: daily targets stop a source's collection for the
+    # day once met; the weekly target drives progress on the status page. A
+    # source that is limited or paused simply falls short for the day —
+    # targets are never met by increasing access speed.
+    weekly_unique_target: int = 1000
+    seek_daily_new_target: int = 75
+    linkedin_daily_new_target: int = 75
 
     @property
     def cors_origin_list(self) -> list[str]:

@@ -11,7 +11,12 @@ import logging
 from collections.abc import AsyncIterator
 
 from collectors.ats_adapters.config import load_board_tokens
-from collectors.base import BaseCollector, SearchParams
+from collectors.base import (
+    AccessBlockedError,
+    BaseCollector,
+    RateLimitedError,
+    SearchParams,
+)
 from collectors.utils import country_from_name, parse_datetime, strip_html, trim
 from packages.job_schema import NormalizedJob, RemoteType, Source
 
@@ -56,14 +61,19 @@ class RipplingCollector(BaseCollector):
                 collected = 0
                 page = 0
                 while collected < params.results_wanted:
+                    if not await self._pre_request():
+                        return
                     try:
-                        response = await client.get(
+                        payload = await self._board_json(
+                            client,
                             LIST_URL.format(board=board),
+                            board=board,
                             params={"page": page, "pageSize": PAGE_SIZE},
                         )
-                        response.raise_for_status()
-                        payload = response.json()
+                    except (RateLimitedError, AccessBlockedError):
+                        raise
                     except Exception as exc:  # noqa: BLE001
+                        self._note_board_failure(board, exc)
                         logger.warning("rippling: %s failed: %s", board, exc)
                         break
 
@@ -77,6 +87,7 @@ class RipplingCollector(BaseCollector):
                             yield job
                             collected += 1
                             if collected >= params.results_wanted:
+                                self._note_board_incomplete(board)
                                 break
                     page += 1
                     if page >= int(payload.get("totalPages") or 0):
@@ -86,10 +97,14 @@ class RipplingCollector(BaseCollector):
     async def _fetch_detail(self, client, board: str, job_id) -> dict | None:
         if not job_id:
             return None
+        if not await self._note_detail():
+            return None
         try:
             response = await client.get(DETAIL_URL.format(board=board, job_id=job_id))
-            response.raise_for_status()
+            self._raise_for_status(response)
             return response.json()
+        except (RateLimitedError, AccessBlockedError):
+            raise
         except Exception as exc:  # noqa: BLE001
             logger.debug("rippling: detail %s failed: %s", job_id, exc)
             return None

@@ -68,106 +68,44 @@ const CURRENCIES: [string, string][] = [
 export function SearchForm({ values }: { values: Record<string, string> }) {
   return (
     <form className="search-form" action="/" method="get" data-testid="search-form">
-      <div className="field field-grow">
-        <label htmlFor="q">关键词</label>
-        <input
-          id="q"
-          name="q"
-          type="search"
-          placeholder="例如：data engineer"
-          defaultValue={values.q ?? ""}
-          data-testid="search-q"
-        />
+      <div className="search-main">
+        <div className="field search-keyword">
+          <label htmlFor="q">职位、技能或公司</label>
+          <input
+            id="q"
+            name="q"
+            type="search"
+            placeholder="例如：Registered Nurse、Data Engineer"
+            defaultValue={values.q ?? ""}
+            data-testid="search-q"
+          />
+        </div>
+        <div className="field search-country">
+          <label htmlFor="country">国家或地区</label>
+          <select id="country" name="country" defaultValue={values.country ?? ""} data-testid="search-country">
+            {COUNTRIES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
+        </div>
+        <div className="field search-city">
+          <label htmlFor="city">城市</label>
+          <input id="city" name="city" placeholder="任意城市" defaultValue={values.city ?? ""} />
+        </div>
+        <div className="field field-actions search-actions">
+          <button type="submit" className="btn-primary" data-testid="search-submit">搜索职位</button>
+          <Link className="search-reset" href="/">清除</Link>
+        </div>
       </div>
-      <div className="field">
-        <label htmlFor="country">国家</label>
-        <select id="country" name="country" defaultValue={values.country ?? ""} data-testid="search-country">
-          {COUNTRIES.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="field">
-        <label htmlFor="source">来源</label>
-        <select id="source" name="source" defaultValue={values.source ?? ""}>
-          {SOURCES.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="field">
-        <label htmlFor="city">城市</label>
-        <input id="city" name="city" placeholder="例如：Sydney" defaultValue={values.city ?? ""} />
-      </div>
-      <div className="field">
-        <label htmlFor="remote_type">工作方式</label>
-        <select id="remote_type" name="remote_type" defaultValue={values.remote_type ?? ""}>
-          {REMOTE_TYPES.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="field">
-        <label htmlFor="employment_type">雇佣类型</label>
-        <select
-          id="employment_type"
-          name="employment_type"
-          defaultValue={values.employment_type ?? ""}
-        >
-          {EMPLOYMENT_TYPES.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="field">
-        <label htmlFor="sort">排序</label>
-        <select id="sort" name="sort" defaultValue={values.sort ?? "posted_at"}>
-          {SORT_OPTIONS.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="field">
-        <label htmlFor="min_salary">最低薪资</label>
-        <input
-          id="min_salary"
-          name="min_salary"
-          type="number"
-          min={0}
-          step={5000}
-          placeholder="120000"
-          defaultValue={values.min_salary ?? ""}
-        />
-      </div>
-      <div className="field">
-        <label htmlFor="currency">薪资币种</label>
-        <select id="currency" name="currency" defaultValue={values.currency ?? ""}>
-          {CURRENCIES.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="field field-actions">
-        <button type="submit" className="btn-primary" data-testid="search-submit">
-          搜索
-        </button>
-        <Link className="btn-ghost" href="/">
-          重置
-        </Link>
-      </div>
+      <details className="search-advanced" open={Boolean(values.source || values.remote_type || values.employment_type || values.min_salary || values.currency || values.sort === "salary_max")}>
+        <summary>更多筛选 <span>来源、工作方式、雇佣类型、薪资和排序</span></summary>
+        <div className="search-advanced-grid">
+          <div className="field"><label htmlFor="source">职位来源</label><select id="source" name="source" defaultValue={values.source ?? ""}>{SOURCES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+          <div className="field"><label htmlFor="remote_type">工作方式</label><select id="remote_type" name="remote_type" defaultValue={values.remote_type ?? ""}>{REMOTE_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+          <div className="field"><label htmlFor="employment_type">雇佣类型</label><select id="employment_type" name="employment_type" defaultValue={values.employment_type ?? ""}>{EMPLOYMENT_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+          <div className="field"><label htmlFor="min_salary">最低年薪</label><input id="min_salary" name="min_salary" type="number" min={0} step={5000} placeholder="例如：80000" defaultValue={values.min_salary ?? ""} /></div>
+          <div className="field"><label htmlFor="currency">薪资币种</label><select id="currency" name="currency" defaultValue={values.currency ?? ""}>{CURRENCIES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+          <div className="field"><label htmlFor="sort">排序方式</label><select id="sort" name="sort" defaultValue={values.sort ?? "posted_at"}>{SORT_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+        </div>
+      </details>
     </form>
   );
 }
-

@@ -12,6 +12,7 @@ import os
 from contextlib import contextmanager
 
 import pytest
+import sqlalchemy as sa
 from alembic import command
 from alembic.config import Config
 from alembic.script import ScriptDirectory
@@ -49,10 +50,15 @@ def _alembic_version(engine) -> str | None:
         return conn.scalar(text("SELECT version_num FROM alembic_version"))
 
 
-def _assert_single_head() -> None:
+def _expected_head() -> str:
     script = ScriptDirectory.from_config(_alembic_config())
     heads = script.get_heads()
-    assert heads == ["0014_import_gateway"], f"multiple migration heads: {heads}"
+    assert len(heads) == 1, f"multiple migration heads: {heads}"
+    return heads[0]
+
+
+def _assert_single_head() -> None:
+    _expected_head()
 
 
 def _insert_job(engine, source_job_id: str, source: str = "testsrc") -> None:
@@ -80,7 +86,13 @@ def test_sqlite_roundtrip_and_downgraded_uniqueness(tmp_path):
         command.upgrade(cfg, "head")
         engine = create_engine(url)
         try:
-            assert _alembic_version(engine) == "0014_import_gateway"
+            assert _alembic_version(engine) == _expected_head()
+            # 0016: collection-control schema exists at head.
+            inspector = sa.inspect(engine)
+            tables = set(inspector.get_table_names())
+            assert {"source_controls", "source_visit_counters"} <= tables
+            run_columns = {col["name"] for col in inspector.get_columns("collector_runs")}
+            assert {"stopped_reason", "pages_visited", "details_visited"} <= run_columns
         finally:
             engine.dispose()
 
@@ -100,7 +112,7 @@ def test_sqlite_roundtrip_and_downgraded_uniqueness(tmp_path):
         command.upgrade(cfg, "head")
         engine = create_engine(url)
         try:
-            assert _alembic_version(engine) == "0014_import_gateway"
+            assert _alembic_version(engine) == _expected_head()
         finally:
             engine.dispose()
 
@@ -158,6 +170,6 @@ def test_postgres_roundtrip():
         command.upgrade(cfg, "head")
     engine = create_engine(url)
     try:
-        assert _alembic_version(engine) == "0014_import_gateway"
+        assert _alembic_version(engine) == _expected_head()
     finally:
         engine.dispose()

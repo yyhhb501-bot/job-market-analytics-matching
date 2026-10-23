@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from sqlalchemy import func, select
 
-from apps.api.models import Job
+from apps.api.models import Job, SourceAuthorization, utcnow
 from apps.worker.pipeline import persist_job
 from packages.job_schema import NormalizedJob
 
@@ -130,6 +130,15 @@ def test_import_matching_public_job_counts_as_duplicate(client, session):
             country="AU",
         ),
     )
+    session.add(
+        SourceAuthorization(
+            source="indeed",
+            evidence_ref="test-license:import-gateway:public-seed",
+            approved=True,
+            commercial_display=True,
+            valid_from=utcnow(),
+        )
+    )
     session.commit()
 
     device = create_device(client)
@@ -165,3 +174,32 @@ def test_invalid_item_is_rejected_without_failing_batch(client):
         json={"jobs": [sample_job(), {"source_job_id": "x", "title": ""}]},
     )
     assert body.status_code == 422
+
+
+def test_operator_admin_view_lists_all_private_imports(client):
+    first = create_device(client, name="edge-one", owner="admin")
+    second = create_device(client, name="edge-two", owner="admin")
+    client.post("/api/v1/import/jobs", headers=auth(first["token"]), json={"jobs": [sample_job()]})
+    client.post(
+        "/api/v1/import/jobs",
+        headers=auth(second["token"]),
+        json={"jobs": [sample_job(source_job_id="li-2", country="US", title="Data Engineer")]},
+    )
+    response = client.get("/api/v1/import/admin?page=1&page_size=1")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["summary"]["total_jobs"] == 2
+    assert body["summary"]["total_batches"] == 2
+    assert body["summary"]["devices"] == 2
+    assert body["summary"]["by_country"] == {"AU": 1, "US": 1}
+    assert body["jobs"]["total"] == 2
+    assert len(body["jobs"]["items"]) == 1
+    assert body["jobs"]["items"][0]["device"]["name"] == "edge-two"
+    assert len(body["batches"]) == 2
+
+    filtered = client.get("/api/v1/import/admin?q=Data%20Engineer&country=US")
+    assert filtered.status_code == 200
+    assert filtered.json()["summary"]["total_jobs"] == 2
+    assert filtered.json()["jobs"]["total"] == 1
+    assert filtered.json()["jobs"]["items"][0]["job"]["title"] == "Data Engineer"
+    assert client.get("/api/v1/import/admin?q=Data%20Engineer&country=AU").json()["jobs"]["total"] == 0

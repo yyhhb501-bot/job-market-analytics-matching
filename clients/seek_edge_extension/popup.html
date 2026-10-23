@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>SEEK 澳洲 Registered Nurse</title>
+  <style>
+    body {
+      font: 14px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      width: 350px;
+      margin: 0;
+      padding: 16px;
+      color: #172b4d;
+      background: #fdfdfd;
+      box-sizing: border-box;
+    }
+    h2 {
+      font-size: 17px;
+      margin: 0 0 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      background: #e6f0fa;
+      color: #0874d1;
+      padding: 2px 7px;
+      border-radius: 999px;
+    }
+    small {
+      color: #526575;
+      line-height: 1.4;
+      display: block;
+    }
+    label {
+      display: block;
+      margin: 10px 0;
+      font-size: 13px;
+    }
+    input, button {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 8px;
+      font: inherit;
+      border-radius: 6px;
+    }
+    input {
+      border: 1px solid #c9d6df;
+      background: #fff;
+    }
+    button {
+      margin: 5px 0;
+      cursor: pointer;
+      border: 1px solid #ccd8e0;
+      background: #f7f9fa;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+    button:hover {
+      background: #eef2f5;
+    }
+    .primary-btn {
+      background: #0874d1;
+      border-color: #0874d1;
+      color: #fff;
+      font-weight: 600;
+      padding: 9px;
+    }
+    .primary-btn:hover {
+      background: #065ca7;
+      border-color: #065ca7;
+    }
+    #auto {
+      background: #0874d1;
+      border: 1px solid #0874d1;
+      color: white;
+      font-weight: 600;
+    }
+    #auto:hover {
+      background: #065ca7;
+    }
+    #pauseContinuous {
+      display: none;
+      background: #fff;
+      border: 1px solid #c9d6df;
+      color: #334e68;
+    }
+    .state-card {
+      background: #f4f6f8;
+      border: 1px solid #dce3eb;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 10px 0;
+    }
+    .metrics-row {
+      display: flex;
+      justify-content: space-between;
+      text-align: center;
+      gap: 6px;
+      margin: 6px 0;
+      background: #fff;
+      border: 1px solid #e1e9ef;
+      border-radius: 6px;
+      padding: 8px 4px;
+    }
+    .metric-col {
+      flex: 1;
+    }
+    .metric-num {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0874d1;
+    }
+    .metric-lbl {
+      font-size: 11px;
+      color: #617382;
+    }
+    pre {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      background: #f2f4f7;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      margin: 8px 0;
+    }
+    details {
+      margin-top: 14px;
+      border-top: 1px solid #d7deeb;
+      padding-top: 10px;
+    }
+    summary {
+      cursor: pointer;
+      font-weight: 600;
+      color: #334e68;
+    }
+  </style>
+</head>
+<body>
+  <h2>
+    SEEK 澳洲 Registered Nurse
+    <small id="version" class="badge"></small>
+  </h2>
+  <small>定向采集 Registered Nurse 职位 · 每天 09:00–23:00 自动翻页入库</small>
+
+  <button id="openDashboard" class="primary-btn">打开采集控制台 (网站入口)</button>
+
+  <div class="state-card" id="cardSummary">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <strong id="statusSummaryTitle">任务状态</strong>
+      <span id="syncBadge" style="font-size:11px; color:#2e7d32;">直接入库</span>
+    </div>
+    <div class="metrics-row">
+      <div class="metric-col">
+        <div class="metric-num" id="metricCollected">—</div>
+        <div class="metric-lbl">已采集</div>
+      </div>
+      <div class="metric-col">
+        <div class="metric-num" id="metricPending" style="color:#d97706;">—</div>
+        <div class="metric-lbl">待同步</div>
+      </div>
+      <div class="metric-col">
+        <div class="metric-num" id="metricSynced" style="color:#16a34a;">—</div>
+        <div class="metric-lbl">已入库确认</div>
+      </div>
+    </div>
+  </div>
+
+  <button id="auto">开始自动采集</button>
+  <button id="pauseContinuous">暂停自动采集</button>
+  <pre id="continuousStatus">正在读取任务状态…</pre>
+
+  <details id="advanced">
+    <summary>设置与高级操作</summary>
+    <label>API 地址<input id="apiUrl" value="http://localhost:8010"></label>
+    <label>设备令牌<input id="deviceToken" type="password" autocomplete="off"></label>
+    <button id="save">保存设置</button>
+    <button id="collect">仅采集当前职位</button>
+    <button id="collectVisible">仅采集本页最多 10 条</button>
+    <button id="clear">清除本地去重记录</button>
+    <pre id="status">等待操作…</pre>
+  </details>
+
+  <script src="popup.js"></script>
+</body>
+</html>

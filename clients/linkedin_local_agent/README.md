@@ -83,6 +83,40 @@ Local state lives in `~/.jobagg/linkedin-collector/`:
 
 Use `--reset-checkpoint` to force a full re-scan, `--verbose` for debug logs.
 
+## Manual scoped runs
+
+No config edit needed — narrow the query matrix from the command line when you
+want a small, targeted batch (useful after a security check, or for a spot
+check):
+
+```bash
+# small test task: United States, Data Analyst, 2 pages, at most 20 jobs
+python -m clients.linkedin_local_agent.main --config CONFIG \
+  --country "United States" --keyword "Data Analyst" --pages 2 --limit 20
+
+# preview the selection before opening a browser
+python -m clients.linkedin_local_agent.main --config CONFIG --list-queries \
+  --country Australia --channel remote
+```
+
+- `--country` accepts an ISO code or a common name (`US` / `United States`)
+- `--city` and `--keyword` are case-insensitive substring matches
+- `--channel local|remote` picks one of the two search channels
+- `--pages` / `--limit` cap pages per query and detail fetches/uploads
+- a filter that matches **nothing exits with code 2** instead of silently
+  collecting zero jobs; note the matrix is capped by `search.max_queries`, so
+  confirm the scope with `--list-queries` first
+
+Inspect local run state without opening a browser or touching the network:
+
+```bash
+python -m clients.linkedin_local_agent.main --config CONFIG --status
+```
+
+Prints JSON: configured occupation groups and locations, total queries, the
+seen-store breakdown by status, checkpoint progress, and whether the device
+token is set in the environment.
+
 ## Flow
 
 ```

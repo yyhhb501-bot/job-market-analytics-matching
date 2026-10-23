@@ -13,15 +13,19 @@ from apps.api.config import check_production_settings, get_settings
 from apps.api.metrics import record_http
 from apps.api.routers import (
     boards,
+    collector,
     compare,
     export,
     health,
     import_jobs,
+    import_lifecycle,
     jobs,
     match,
+    member_auth,
     metrics,
     runs,
     saved_searches,
+    source_authorizations,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -67,11 +71,15 @@ app.include_router(export.router, prefix="/api/v1")  # before jobs so /jobs/expo
 app.include_router(jobs.router, prefix="/api/v1")
 app.include_router(saved_searches.router, prefix="/api/v1")
 app.include_router(match.router, prefix="/api/v1")
+app.include_router(member_auth.router, prefix="/api/v1")
 app.include_router(runs.router, prefix="/api/v1")
 app.include_router(compare.router, prefix="/api/v1")
 app.include_router(boards.router, prefix="/api/v1")
+app.include_router(collector.router, prefix="/api/v1")
+app.include_router(source_authorizations.router, prefix="/api/v1")
 if settings.enable_import_gateway:
     app.include_router(import_jobs.router, prefix="/api/v1")
+    app.include_router(import_lifecycle.router, prefix="/api/v1")
 if settings.enable_metrics:
     app.include_router(metrics.router)
 

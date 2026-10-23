@@ -15,7 +15,12 @@ import logging
 from collections.abc import AsyncIterator
 
 from collectors.ats_adapters.config import load_board_tokens
-from collectors.base import BaseCollector, SearchParams
+from collectors.base import (
+    AccessBlockedError,
+    BaseCollector,
+    RateLimitedError,
+    SearchParams,
+)
 from collectors.utils import (
     country_from_name,
     normalize_employment_type,
@@ -48,14 +53,19 @@ class SmartRecruitersCollector(BaseCollector):
                 offset = 0
                 while collected < params.results_wanted:
                     limit = min(PAGE_SIZE, params.results_wanted - collected)
+                    if not await self._pre_request():
+                        return
                     try:
-                        response = await client.get(
+                        payload = await self._board_json(
+                            client,
                             LIST_URL.format(company=company),
+                            board=company,
                             params={"limit": limit, "offset": offset},
                         )
-                        response.raise_for_status()
-                        payload = response.json()
+                    except (RateLimitedError, AccessBlockedError):
+                        raise
                     except Exception as exc:  # noqa: BLE001
+                        self._note_board_failure(company, exc)
                         logger.warning("smartrecruiters: %s failed: %s", company, exc)
                         break
 
@@ -69,6 +79,7 @@ class SmartRecruitersCollector(BaseCollector):
                             yield job
                             collected += 1
                             if collected >= params.results_wanted:
+                                self._note_board_incomplete(company)
                                 break
                     offset += len(content)
                     if len(content) < limit:
@@ -79,12 +90,16 @@ class SmartRecruitersCollector(BaseCollector):
         posting_id = raw.get("id")
         if not posting_id:
             return None
+        if not await self._note_detail():
+            return None
         try:
             response = await client.get(
                 DETAIL_URL.format(company=company, posting_id=posting_id)
             )
-            response.raise_for_status()
+            self._raise_for_status(response)
             return response.json()
+        except (RateLimitedError, AccessBlockedError):
+            raise
         except Exception as exc:  # noqa: BLE001
             logger.debug("smartrecruiters: detail %s/%s failed: %s", company, posting_id, exc)
             return None

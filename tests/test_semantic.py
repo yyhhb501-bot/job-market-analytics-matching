@@ -6,7 +6,7 @@ import math
 from sqlalchemy import select
 
 from apps.api.config import Settings
-from apps.api.models import Job
+from apps.api.models import Job, SourceAuthorization, utcnow
 from apps.worker.pipeline import persist_job
 from packages.job_schema import NormalizedJob
 from packages.semantic import (
@@ -72,6 +72,15 @@ def test_match_uses_semantic_when_embeddings_present(client, session):
             city="Austin",
             country="US",
         ),
+    )
+    session.add(
+        SourceAuthorization(
+            source="test",
+            evidence_ref="test-license:semantic:test",
+            approved=True,
+            commercial_display=True,
+            valid_from=utcnow(),
+        )
     )
     session.commit()
 

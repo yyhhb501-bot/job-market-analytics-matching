@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>领英定向采集</title>
+  <style>
+    body {
+      font: 14px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      width: 360px;
+      margin: 0;
+      padding: 16px;
+      color: #16324a;
+      background: #fdfdfd;
+      box-sizing: border-box;
+    }
+    h2 {
+      margin: 0 0 6px;
+      font-size: 17px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      background: #e1f0fa;
+      color: #0b66c3;
+      padding: 2px 7px;
+      border-radius: 999px;
+    }
+    small {
+      color: #526575;
+      line-height: 1.4;
+      display: block;
+    }
+    label {
+      display: block;
+      margin: 10px 0;
+      font-size: 13px;
+    }
+    input, textarea, select, button {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 8px;
+      font: inherit;
+      border-radius: 6px;
+    }
+    input, textarea, select {
+      border: 1px solid #c9d6df;
+      background: #fff;
+    }
+    button {
+      margin: 5px 0;
+      cursor: pointer;
+      border: 1px solid #ccd8e0;
+      background: #f7f9fa;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+    button:hover {
+      background: #eef2f5;
+    }
+    .primary-btn {
+      background: #0073b1;
+      border-color: #0073b1;
+      color: #fff;
+      font-weight: 600;
+      padding: 9px;
+    }
+    .primary-btn:hover {
+      background: #005582;
+      border-color: #005582;
+    }
+    .btn-resume {
+      background: #e65100;
+      border-color: #e65100;
+      color: #fff;
+      font-weight: 600;
+    }
+    .btn-resume:hover {
+      background: #cc4700;
+    }
+    .state-card {
+      background: #f3f6f9;
+      border: 1px solid #dbe4eb;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 10px 0;
+    }
+    .metrics-row {
+      display: flex;
+      justify-content: space-between;
+      text-align: center;
+      gap: 6px;
+      margin: 6px 0;
+      background: #fff;
+      border: 1px solid #e1e9ef;
+      border-radius: 6px;
+      padding: 8px 4px;
+    }
+    .metric-col {
+      flex: 1;
+    }
+    .metric-num {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0b66c3;
+    }
+    .metric-lbl {
+      font-size: 11px;
+      color: #617382;
+    }
+    pre {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      background: #edf3f8;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      margin: 8px 0;
+    }
+    details {
+      margin-top: 12px;
+      border-top: 1px solid #e2eaef;
+      padding-top: 8px;
+    }
+    summary {
+      cursor: pointer;
+      font-weight: 600;
+      color: #385064;
+    }
+    input[type=checkbox] {
+      width: auto;
+      margin-right: 6px;
+    }
+  </style>
+</head>
+<body>
+  <h2>
+    领英定向职位采集
+    <span class="badge" id="versionText">检测版本…</span>
+  </h2>
+  <small>美国全职业 + 澳洲 Registered Nurse · 自动调度入库</small>
+
+  <button id="openDashboard" class="primary-btn">打开采集控制台 (网站入口)</button>
+
+  <div class="state-card" id="cardSummary">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <strong id="statusSummaryTitle">采集状态</strong>
+      <span id="syncBadge" style="font-size:11px; color:#2e7d32;">自动同步中</span>
+    </div>
+    <div class="metrics-row">
+      <div class="metric-col">
+        <div class="metric-num" id="metricCollected">—</div>
+        <div class="metric-lbl">已采集</div>
+      </div>
+      <div class="metric-col">
+        <div class="metric-num" id="metricPending" style="color:#d97706;">—</div>
+        <div class="metric-lbl">待同步</div>
+      </div>
+      <div class="metric-col">
+        <div class="metric-num" id="metricSynced" style="color:#16a34a;">—</div>
+        <div class="metric-lbl">已入库确认</div>
+      </div>
+    </div>
+  </div>
+
+  <button id="startPaced">开启每日自动采集：09:00–23:00</button>
+  <button id="resume" class="btn-resume">处理验证后继续</button>
+  <button id="stop">暂停并保留进度</button>
+
+  <pre id="status">读取状态…</pre>
+
+  <details>
+    <summary>高级设置与导出</summary>
+    <label><input id="dailyEnabled" type="checkbox">每天自动采集（已配置覆盖队列）</label>
+    <label>每日开始时间<input id="dailyTime" type="time" value="08:00"></label>
+    <button id="saveSchedule">保存每日任务</button>
+    <button id="runDailyNow">立即运行 7 天全职业覆盖</button>
+
+    <label>任务预设
+      <select id="preset">
+        <option value="all-occupations-backfill">美国全职业 + 澳洲 RN ·回溯 7 天</option>
+        <option value="all-occupations-daily">美国全职业 + 澳洲 RN ·近 24 小时</option>
+        <option value="us-data">美国 · Data 相关</option>
+        <option value="au-nursing">澳洲 · Registered Nurse</option>
+        <option value="custom">自定义</option>
+      </select>
+    </label>
+    <button id="applyPreset">应用预设</button>
+
+    <label>任务类型
+      <select id="plan">
+        <option value="custom">自定义关键词</option>
+        <option value="all-occupations">全职业覆盖</option>
+      </select>
+    </label>
+    <label>关键词（逗号或换行分隔）<textarea id="keywords">Data Analyst</textarea></label>
+    <label>地点
+      <select id="location">
+        <option value="melbourne">Melbourne</option>
+        <option value="sydney">Sydney</option>
+        <option value="austin">Austin</option>
+        <option value="australia">Australia</option>
+        <option value="usa">United States</option>
+      </select>
+    </label>
+    <label>办公方式
+      <select id="workplace">
+        <option value="any">不限</option>
+        <option value="onsite">现场</option>
+        <option value="hybrid">混合</option>
+        <option value="remote">远程</option>
+      </select>
+    </label>
+    <label>发布时间
+      <select id="days">
+        <option value="1">近 24 小时</option>
+        <option value="7" selected>近 7 天</option>
+        <option value="30">近 30 天</option>
+      </select>
+    </label>
+    <label>总条数上限<input id="maxJobs" type="number" min="1" max="2000" value="250"></label>
+    <label>每关键词最多页数<input id="maxPages" type="number" min="1" max="40" value="10"></label>
+    <label>每条间隔（秒）<input id="delay" type="number" min="3" max="60" value="5"></label>
+    <label>搜索页最少停留（秒）<input id="pageDwell" type="number" min="0" max="600" value="120"></label>
+    <label>批次结束后的冷却（分钟）<input id="cooldownMinutes" type="number" min="0" max="1440" value="30"></label>
+    <label>页面失败最多重试<input id="maxRetries" type="number" min="0" max="5" value="2"></label>
+    <label>最多执行查询分区<input id="maxQueries" type="number" min="1" max="10000" value="10000"></label>
+    <label>结果接近此数量时自动细分<input id="splitThreshold" type="number" min="100" max="1000" value="800"></label>
+    <label>自动细分最多层数<input id="maxSplitDepth" type="number" min="0" max="4" value="2"></label>
+    <label><input id="includeRegions" type="checkbox" checked>使用已填写 geoId 的州/领地分区</label>
+    <label>排除标题词<textarea id="excludes">Financial Analyst,Laboratory Analyst,Security Analyst</textarea></label>
+    <label><input id="strictTitle" type="checkbox" checked>标题必须包含至少一个关键词</label>
+
+    <button id="start">开始任务（全职业自动使用全天计划）</button>
+    <button id="export">导出本批 JSON</button>
+  </details>
+
+  <script src="catalog.js"></script>
+  <script src="core.js"></script>
+  <script src="presets.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

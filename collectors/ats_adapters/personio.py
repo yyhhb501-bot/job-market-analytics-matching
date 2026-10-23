@@ -13,7 +13,12 @@ from collections.abc import AsyncIterator
 from xml.etree.ElementTree import Element
 
 from collectors.ats_adapters.config import load_board_entries
-from collectors.base import BaseCollector, SearchParams
+from collectors.base import (
+    AccessBlockedError,
+    BaseCollector,
+    RateLimitedError,
+    SearchParams,
+)
 from collectors.utils import (
     infer_country,
     normalize_employment_type,
@@ -56,11 +61,18 @@ class PersonioCollector(BaseCollector):
 
         async with self._client() as client:
             for token, domain in entries:
+                if not await self._pre_request():
+                    return
                 try:
                     response = await client.get(f"https://{token}.{domain}/xml")
-                    response.raise_for_status()
+                    self._raise_for_status(response)
                     root = ET.fromstring(response.content)
+                    self.board_outcomes[token] = True
+                    self.complete_boards.add(token)
+                except (RateLimitedError, AccessBlockedError):
+                    raise
                 except Exception as exc:  # noqa: BLE001
+                    self._note_board_failure(token, exc)
                     logger.warning("personio: %s failed: %s", token, exc)
                     continue
                 for position in root.findall("position"):

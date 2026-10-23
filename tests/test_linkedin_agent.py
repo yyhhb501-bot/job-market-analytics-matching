@@ -342,3 +342,125 @@ def test_upload_raises_on_error_response():
         assert excinfo.value.status_code == 401
     finally:
         client.close()
+
+
+# --- manual scoped runs + status ---------------------------------------------
+
+
+def _multi_scope_config():
+    data = _config_dict()
+    data["locations"] = {
+        "centers": [
+            {"country": "AU", "state": "VIC", "city": "Melbourne", "geo_id": "123"},
+            {"country": "US", "state": "TX", "city": "Austin", "geo_id": "456"},
+        ],
+        "countries": [
+            {"country": "AU", "geo_id": "101452733"},
+            {"country": "US", "geo_id": "103644278"},
+        ],
+    }
+    return config_from_dict(data)
+
+
+def test_scope_queries_filters_by_country_code_and_name():
+    from clients.linkedin_local_agent.main import scope_queries
+
+    config = _multi_scope_config()
+    by_code = scope_queries(config, country="US")
+    by_name = scope_queries(config, country="United States")
+    assert by_code and {q.country for q in by_code} == {"US"}
+    assert [q.label for q in by_name] == [q.label for q in by_code]
+
+
+def test_scope_queries_filters_by_city_keyword_and_channel():
+    from clients.linkedin_local_agent.main import scope_queries
+
+    config = _multi_scope_config()
+    city = scope_queries(config, city="Melbourne")
+    assert city and all(q.city == "Melbourne" for q in city)
+
+    keyword = scope_queries(config, keyword="BI Analyst")
+    assert keyword and all(q.keyword == "BI Analyst" for q in keyword)
+
+    remote = scope_queries(config, channel="remote")
+    assert remote and all(q.channel == "remote" for q in remote)
+
+    narrowed = scope_queries(config, country="US", keyword="BI Analyst")
+    assert len(narrowed) == 2  # local Austin + country-wide remote
+
+
+def test_scope_queries_returns_empty_for_unknown_values():
+    """An unmatched scope must yield nothing so the CLI can fail loudly."""
+    from clients.linkedin_local_agent.main import scope_queries
+
+    config = _multi_scope_config()
+    assert scope_queries(config, country="Narnia") == []
+    assert scope_queries(config, keyword="Astronaut") == []
+    assert scope_queries(config)  # no filters -> whole matrix
+
+
+def test_cli_errors_when_manual_scope_matches_nothing(tmp_path, capsys):
+    from clients.linkedin_local_agent.main import main
+
+    config_path = tmp_path / "config.json"
+    config_path.write_text(json.dumps(_config_dict()), encoding="utf-8")
+
+    code = main(["--config", str(config_path), "--list-queries", "--country", "Narnia"])
+    assert code == 2
+
+
+def test_cli_pages_and_limit_override_config_without_mutating_it(tmp_path):
+    import argparse
+
+    from clients.linkedin_local_agent.config import load_config
+    from clients.linkedin_local_agent.main import _apply_overrides
+
+    config_path = tmp_path / "config.json"
+    config_path.write_text(json.dumps(_config_dict()), encoding="utf-8")
+    config = load_config(config_path)
+    original_pages = config.search.max_pages_per_query
+
+    args = argparse.Namespace(pages=1, limit=20)
+    updated = _apply_overrides(config, args)
+    assert updated.search.max_pages_per_query == 1
+    assert updated.search.max_detail_fetches == 20
+    assert config.search.max_pages_per_query == original_pages  # unchanged
+
+
+def test_apply_overrides_is_a_noop_without_flags():
+    import argparse
+
+    from clients.linkedin_local_agent.main import _apply_overrides
+
+    config = config_from_dict(_config_dict())
+    result = _apply_overrides(config, argparse.Namespace(pages=None, limit=None))
+    assert result is config
+
+
+def test_collect_status_reports_local_state(tmp_path):
+    from clients.linkedin_local_agent.main import collect_status
+
+    data = _config_dict()
+    data["storage"] = {"data_dir": str(tmp_path)}
+    config = config_from_dict(data)
+
+    empty = collect_status(config)
+    assert empty["seen_keys_tracked"] == 0
+    assert empty["device_token_set"] is False
+    assert empty["queries"] == len(build_queries(config))
+
+    seen = SeenStore(tmp_path / "seen.json")
+    seen.entries = {"1": {"status": STATE_UPLOADED, "job_id": "1"}}
+    seen.save()
+    checkpoint = Checkpoint(tmp_path / "checkpoint.json")
+    checkpoint.mark_page_done("k1")
+    checkpoint.mark_uploaded(["1"])
+    checkpoint.bump("discovered", 3)
+    checkpoint.save()
+
+    status = collect_status(config)
+    assert status["seen_keys_tracked"] == 1
+    assert status["seen_by_status"] == {STATE_UPLOADED: 1}
+    assert status["checkpoint"]["completed_pages"] == 1
+    assert status["checkpoint"]["uploaded_job_ids"] == 1
+    assert status["checkpoint"]["stats"]["discovered"] == 3

@@ -1,0 +1,52 @@
+{
+  "manifest_version": 3,
+  "name": "SEEK 搜索页自动采集（本地）",
+  "version": "2.3.1",
+  "description": "逐条采集 SEEK 当前搜索页全部职位，处理完自动翻页；验证码和访问限制会暂停任务。",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "tabs",
+    "scripting",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://au.seek.com/*",
+    "https://www.seek.com.au/*",
+    "https://seek.com.au/*",
+    "https://*/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://au.seek.com/*",
+        "https://www.seek.com.au/*",
+        "https://seek.com.au/*"
+      ],
+      "js": [
+        "core.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "http://localhost/admin/imports*",
+        "http://127.0.0.1/admin/imports*"
+      ],
+      "js": [
+        "bridge.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": false
+    }
+  ]
+}

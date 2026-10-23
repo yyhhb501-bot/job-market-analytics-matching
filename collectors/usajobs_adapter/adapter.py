@@ -10,7 +10,13 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncIterator
 
-from collectors.base import BaseCollector, CollectorError, SearchParams
+from collectors.base import (
+    AccessBlockedError,
+    BaseCollector,
+    CollectorError,
+    RateLimitedError,
+    SearchParams,
+)
 from collectors.utils import parse_datetime, parse_salary_number
 from packages.job_schema import NormalizedJob, Source
 
@@ -62,12 +68,16 @@ class USAJobsCollector(BaseCollector):
                 }
                 if params.location:
                     query["LocationName"] = params.location
+                if not await self._pre_request():
+                    return
                 try:
                     response = await client.get(
                         self.BASE_URL, params=query, headers={"Host": "data.usajobs.gov"}
                     )
-                    response.raise_for_status()
+                    self._raise_for_status(response)
                     payload = response.json()
+                except (RateLimitedError, AccessBlockedError):
+                    raise
                 except Exception as exc:  # noqa: BLE001
                     logger.warning("usajobs: page %s failed: %s", page, exc)
                     break

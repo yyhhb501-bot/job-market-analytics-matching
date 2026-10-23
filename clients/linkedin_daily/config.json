@@ -1,0 +1,13 @@
+{
+  "timezone": "Asia/Shanghai",
+  "hour": 8,
+  "minute": 0,
+  "lookback_days": 7,
+  "pages_per_keyword": 5,
+  "max_jobs_per_target": 250,
+  "delay_seconds": 5,
+  "targets": [
+    {"name": "us-data", "geo_id": "103644278", "title_pattern": "data|analytics|business intelligence|machine learning|reporting analyst", "keywords": ["Data Analyst", "Data Scientist", "Data Engineer", "Analytics Engineer", "Business Intelligence Analyst", "Machine Learning Engineer", "Reporting Analyst"]},
+    {"name": "au-nursing", "geo_id": "101452733", "title_pattern": "nurs", "exclude_pattern": "veterinary|dental", "keywords": ["Registered Nurse", "Enrolled Nurse", "Clinical Nurse", "Nurse Practitioner", "Nurse Unit Manager", "Community Nurse", "Mental Health Nurse", "Aged Care Nurse", "Assistant in Nursing"]}
+  ]
+}

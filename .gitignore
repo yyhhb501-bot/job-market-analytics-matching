@@ -49,3 +49,10 @@ Thumbs.db
 .idea/
 .vscode/
 .zcode/
+
+# Agent / CLI cache
+.agent/
+.zcodeignore
+apps/web/.playwright-cli/
+celerybeat-schedule*
+新建文件夹/

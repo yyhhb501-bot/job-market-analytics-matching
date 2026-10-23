@@ -14,6 +14,7 @@ from apps.api.schemas import (
     SourceHealthOut,
     SourceRunSummary,
 )
+from apps.api.source_authorization import public_job_condition
 
 router = APIRouter(tags=["runs"])
 
@@ -63,7 +64,7 @@ def source_health(
     db: Session = Depends(get_db), limit: int = Query(default=5000, ge=1, le=20000)
 ) -> list[SourceHealthOut]:
     """Per-source health incl. success rate, zero-result streaks and drift."""
-    public = Job.visibility == "public"
+    public = public_job_condition()
     totals = dict(
         db.execute(select(Job.source, func.count()).where(public).group_by(Job.source)).all()
     )

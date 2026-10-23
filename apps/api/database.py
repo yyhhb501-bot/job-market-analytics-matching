@@ -68,7 +68,10 @@ def ensure_full_text_index(engine: Engine) -> None:
 
 
 def create_all() -> None:
-    from apps.api import models  # noqa: F401  (ensure models are registered)
+    from apps.api import (
+        membership_models,  # noqa: F401 (ensure member table is registered)
+        models,  # noqa: F401  (ensure models are registered)
+    )
 
     engine = get_engine()
     Base.metadata.create_all(bind=engine)

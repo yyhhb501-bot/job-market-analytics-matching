@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import AliasPath, BaseModel, ConfigDict, Field, field_validator
 
 
 class JobOut(BaseModel):
@@ -15,6 +15,10 @@ class JobOut(BaseModel):
     source: str
     source_job_id: str
     title: str
+    is_active: bool = True
+    closed_at: datetime | None = None
+    review_status: str | None = Field(default=None, validation_alias=AliasPath('raw_payload', 'lifecycle', 'status'))
+    last_checked_at: datetime | None = Field(default=None, validation_alias=AliasPath('raw_payload', 'lifecycle', 'checked_at'))
     company: str | None = None
     description: str | None = None
     canonical_url: str | None = None
@@ -303,6 +307,9 @@ class MatchResult(BaseModel):
     shared_keywords: list[str]
     semantic_score: float | None = None
     rerank_score: float | None = None
+    keyword_coverage_score: float | None = None
+    title_weight_score: float | None = None
+    recency_score: float | None = None
 
 
 class MatchResponse(BaseModel):
@@ -382,6 +389,7 @@ class ImportJobsResponse(BaseModel):
     duplicate_count: int
     rejected_count: int
     errors: list[ImportErrorItem] = []
+    progress: dict | None = None
 
 
 class ImportBatchOut(BaseModel):

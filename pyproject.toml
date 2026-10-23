@@ -25,6 +25,7 @@ dependencies = [
     "prometheus-client>=0.20",
     "pandas>=2.2",
     "openpyxl>=3.1",
+    "scikit-learn>=1.4.0",
     # python-jobspy hard-pins numpy==1.26.3, which ships no Python 3.13
     # wheels — hence the <3.13 cap below and Python 3.12 in CI/Docker.
     "python-jobspy>=1.1.80",

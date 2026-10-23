@@ -1,9 +1,25 @@
-"""Collection pipeline: stream -> normalise -> three-layer dedup -> persist."""
+"""Collection pipeline: stream -> normalise -> three-layer dedup -> persist.
+
+Run outcomes are classified into four categories so the task layer can decide
+about retries and humans can trust the results:
+
+- ``success``   — clean run, nothing suspicious;
+- ``partial``   — ended early (visit/time budget) or some items/boards failed;
+- ``retryable``  — transient upstream failure; the Celery task retries it;
+- ``blocked``   — CAPTCHA / 401/403 / login wall; the source is paused for a
+  human and never retried automatically.
+
+Missing-job sweeps run per board (company) and only after that board's full
+snapshot was read successfully — a failing board can no longer age out its
+jobs. Sources can be paused manually or by the pipeline, and a run mutex
+keeps full / hot / manual dispatches from collecting the same source twice.
+"""
 
 from __future__ import annotations
 
 import datetime as dt
 import logging
+import time
 from dataclasses import dataclass
 
 from sqlalchemy import or_, select, update
@@ -13,14 +29,25 @@ from sqlalchemy.orm import Session, sessionmaker
 from apps.api.boards import load_runtime_boards
 from apps.api.config import get_settings
 from apps.api.metrics import record_run
-from apps.api.models import CollectorRun, Job
+from apps.api.models import CollectorRun, Job, SourceControl, utcnow
 from collectors.ats_adapters.config import set_runtime_boards
-from collectors.base import BaseCollector, SearchParams
+from collectors.base import (
+    AccessBlockedError,
+    BaseCollector,
+    RetryableCollectorError,
+    SearchParams,
+    classify_exception,
+)
+from collectors.budget import VisitBudget
 from packages.deduplication import compute_hashes
 from packages.enrichment import enrich_job
 from packages.job_schema import ATS_SOURCES, NormalizedJob
 
 logger = logging.getLogger("jobagg.worker.pipeline")
+
+# A "running" CollectorRun older than this is stale (crashed worker) and no
+# longer blocks a new run for the same source.
+MUTEX_STALE_MINUTES = 120
 
 
 def _utcnow() -> dt.datetime:
@@ -36,6 +63,11 @@ class RunStats:
     duplicates: int = 0
     errors: int = 0
     error: str | None = None
+    outcome: str = "success"  # success | partial | retryable | blocked | paused | skipped
+    stopped_reason: str | None = None
+    pages_visited: int = 0
+    details_visited: int = 0
+    retry_after: float | None = None
 
     def merge(self, other: RunStats) -> None:
         self.seen += other.seen
@@ -53,6 +85,11 @@ class RunStats:
             "duplicates": self.duplicates,
             "errors": self.errors,
             "error": self.error,
+            "outcome": self.outcome,
+            "stopped_reason": self.stopped_reason,
+            "pages_visited": self.pages_visited,
+            "details_visited": self.details_visited,
+            "retry_after": self.retry_after,
         }
 
 
@@ -100,7 +137,7 @@ def _owner_identity_condition(owner_device_id: int | None):
 def _owner_match_condition(owner_device_id: int | None):
     """Cross-post dedup scope: public rows plus the importing device's own rows."""
     if owner_device_id is None:
-        return Job.owner_device_id.is_(None)
+        return or_(Job.owner_device_id.is_(None), Job.owner_device_id == owner_device_id)
     return or_(Job.owner_device_id.is_(None), Job.owner_device_id == owner_device_id)
 
 
@@ -112,6 +149,7 @@ def persist_job_row(
     visibility: str = "public",
     collection_mode: str = "platform",
     owner_device_id: int | None = None,
+    source_board_id: int | None = None,
 ) -> tuple[str, Job]:
     """Upsert one job and return ``(action, row)``.
 
@@ -135,6 +173,8 @@ def persist_job_row(
             for key, value in _job_fields(job, hashes).items():
                 setattr(existing, key, value)
             existing.updated_at = now
+        if existing.source_board_id is None and source_board_id is not None:
+            existing.source_board_id = source_board_id
         existing.last_seen_at = now
         existing.is_active = True
         existing.closed_at = None
@@ -186,6 +226,7 @@ def persist_job_row(
         visibility=visibility,
         collection_mode=collection_mode,
         owner_device_id=owner_device_id,
+        source_board_id=source_board_id,
         **_job_fields(job, hashes),
     )
     session.add(row)
@@ -218,32 +259,37 @@ def persist_job_row_safe(
             return persist_job_row(session, job, run_id, **kwargs)
 
 
-def persist_job_safe(session: Session, job: NormalizedJob, run_id: int | None = None) -> str:
+def persist_job_safe(
+    session: Session, job: NormalizedJob, run_id: int | None = None, **kwargs
+) -> str:
     """Persist one job inside a savepoint; survive a concurrent-insert race.
 
     A bad row only rolls back its own savepoint instead of the whole batch.
     """
     try:
         with session.begin_nested():
-            return persist_job(session, job, run_id)
+            return persist_job(session, job, run_id, **kwargs)
     except IntegrityError:
         # Another worker inserted the same job between our SELECT and INSERT;
         # retry once so layer-2/3 dedup can attach it as a duplicate. The retry
         # gets its own savepoint so a second failure leaves the session usable.
         with session.begin_nested():
-            return persist_job(session, job, run_id)
+            return persist_job(session, job, run_id, **kwargs)
 
 
-def apply_missing_sweep(
-    session: Session, source: str, run_id: int, threshold: int
+def apply_board_missing_sweep(
+    session: Session, board_ids: list[int], run_id: int, threshold: int
 ) -> dict:
-    """After a complete board run, age out jobs that did not appear.
+    """Age out jobs of *fully collected* boards that did not appear this run.
 
-    Only safe for full-board snapshot sources (ATS); keyword-search sources
-    must not use this because a successful search is not a board snapshot.
+    Only boards whose snapshot was read completely and successfully may close
+    their missing jobs; a board that failed (or a source without board
+    attribution) is never swept. Keyword-search sources must not use this.
     """
+    if not board_ids:
+        return {"closed": 0}
     unseen = (
-        Job.source == source,
+        Job.source_board_id.in_(board_ids),
         Job.is_active.is_(True),
         or_(Job.last_seen_run_id.is_(None), Job.last_seen_run_id != run_id),
     )
@@ -252,11 +298,49 @@ def apply_missing_sweep(
     )
     closed = session.execute(
         update(Job)
-        .where(Job.source == source, Job.is_active.is_(True), Job.missing_runs >= threshold)
+        .where(
+            Job.source_board_id.in_(board_ids),
+            Job.is_active.is_(True),
+            Job.missing_runs >= threshold,
+        )
         .values(is_active=False, closed_at=_utcnow(), inactive_reason="missing")
     )
     session.commit()
     return {"closed": int(closed.rowcount or 0)}
+
+
+def pause_source(session: Session, source: str, reason: str, note: str | None = None) -> None:
+    """Pause a collection source until an operator resumes it."""
+    control = session.scalar(select(SourceControl).where(SourceControl.source == source))
+    if control is None:
+        control = SourceControl(source=source)
+        session.add(control)
+    control.paused = True
+    control.pause_reason = reason
+    control.paused_at = _utcnow()
+    if note:
+        control.note = note[:2000]
+    session.commit()
+
+
+def resume_source(session: Session, source: str) -> bool:
+    """Clear a source's pause. Returns False when the source was not paused."""
+    control = session.scalar(select(SourceControl).where(SourceControl.source == source))
+    if control is None or not control.paused:
+        return False
+    control.paused = False
+    control.pause_reason = None
+    control.paused_at = None
+    control.note = None
+    session.commit()
+    return True
+
+
+def source_is_paused(session: Session, source: str) -> SourceControl | None:
+    control = session.scalar(select(SourceControl).where(SourceControl.source == source))
+    if control is not None and control.paused:
+        return control
+    return None
 
 
 def _finish_run(session: Session, run_id: int, status: str, stats: RunStats) -> None:
@@ -269,7 +353,28 @@ def _finish_run(session: Session, run_id: int, status: str, stats: RunStats) -> 
     run.jobs_updated = stats.updated
     run.jobs_duplicate = stats.duplicates
     run.error = stats.error
+    run.stopped_reason = stats.stopped_reason
+    run.pages_visited = stats.pages_visited
+    run.details_visited = stats.details_visited
     run.finished_at = _utcnow()
+    session.commit()
+
+
+def _record_gate_run(
+    session: Session, source: str, status: str, stats: RunStats, reason: str
+) -> None:
+    """Persist a zero-job run row for a gated (paused/skipped) dispatch."""
+    run = CollectorRun(
+        source=source,
+        status=status,
+        params=None,
+        jobs_seen=0,
+        error=reason,
+        started_at=_utcnow(),
+        finished_at=_utcnow(),
+        stopped_reason=reason,
+    )
+    session.add(run)
     session.commit()
 
 
@@ -278,30 +383,86 @@ async def run_collector(
     params: SearchParams,
     session_factory: sessionmaker[Session],
 ) -> RunStats:
-    """Run a single collector end-to-end and record its status."""
+    """Run a single collector end-to-end: gates, budget, stream, sweep, status."""
+    settings = get_settings()
     stats = RunStats(source=collector.name)
-    run = CollectorRun(
-        source=collector.name,
-        status="running",
-        params={
-            "keywords": params.keywords,
-            "location": params.location,
-            "country": params.country,
-            "results_wanted": params.results_wanted,
-        },
-        started_at=_utcnow(),
-    )
+    max_run_minutes = max(int(settings.max_run_minutes or 0), 0)
+    deadline = time.monotonic() + max_run_minutes * 60 if max_run_minutes else None
+
     with session_factory() as session:
+        # Gate 1: operator/pipeline pause — collect nothing until resumed.
+        paused = source_is_paused(session, collector.name)
+        if paused is not None:
+            stats.outcome = "paused"
+            stats.stopped_reason = paused.pause_reason or "manual"
+            stats.error = f"source paused ({stats.stopped_reason}); resume via collector controls"
+            logger.info("collector %s skipped: paused (%s)", collector.name, stats.stopped_reason)
+            return stats
+
+        # Gate 2: run mutex — full / hot / manual dispatches must not collect
+        # the same source concurrently. Stale "running" rows (crashed worker)
+        # stop blocking after the staleness window.
+        staleness = dt.timedelta(minutes=max(max_run_minutes, MUTEX_STALE_MINUTES))
+        active_id = session.scalar(
+            select(CollectorRun.id)
+            .where(
+                CollectorRun.source == collector.name,
+                CollectorRun.status == "running",
+                CollectorRun.started_at > utcnow() - staleness,
+            )
+            .limit(1)
+        )
+        if active_id is not None:
+            stats.outcome = "skipped"
+            stats.stopped_reason = "already_running"
+            _record_gate_run(session, collector.name, "skipped", stats, stats.stopped_reason)
+            logger.info("collector %s skipped: a run is already active", collector.name)
+            return stats
+
+        run = CollectorRun(
+            source=collector.name,
+            status="running",
+            params={
+                "keywords": params.keywords,
+                "location": params.location,
+                "country": params.country,
+                "results_wanted": params.results_wanted,
+                "extra": params.extra,
+            },
+            started_at=_utcnow(),
+        )
         session.add(run)
         session.commit()
         run_id = run.id
+
+        if settings.daily_page_visit_limit or settings.daily_detail_visit_limit:
+            collector.budget = VisitBudget(
+                collector.name,
+                session_factory=session_factory,
+                page_limit=settings.daily_page_visit_limit,
+                detail_limit=settings.daily_detail_visit_limit,
+            )
         try:
-            set_runtime_boards(load_runtime_boards(session))
+            runtime = load_runtime_boards(session)
+            set_runtime_boards(runtime)
+            board_map: dict[tuple[str, str | None], int] = {
+                (provider, entry.get("token")): entry["board_id"]
+                for provider, entries in runtime.items()
+                for entry in entries
+                if entry.get("board_id")
+            }
             collector.validate()
             async for job in collector.stream(params):
+                if job.board_token is None and collector.current_board:
+                    job.board_token = collector.current_board
+                board_id = (
+                    board_map.get((collector.name, job.board_token)) if job.board_token else None
+                )
                 stats.seen += 1
                 try:
-                    action = persist_job_safe(session, job, run_id)
+                    action = persist_job_safe(
+                        session, job, run_id, source_board_id=board_id
+                    )
                 except Exception:  # noqa: BLE001 - isolate the bad row
                     session.rollback()
                     stats.errors += 1
@@ -315,28 +476,86 @@ async def run_collector(
                     stats.duplicates += 1
                 if stats.seen % 200 == 0:
                     session.commit()
+                if deadline is not None and time.monotonic() > deadline:
+                    stats.stopped_reason = "time_budget"
+                    logger.info("collector %s stopped: time budget reached", collector.name)
+                    break
             session.commit()
-            settings = get_settings()
-            board_complete = stats.seen < params.results_wanted and stats.seen > 0
-            if (
-                settings.board_sweep_enabled
-                and board_complete
-                and collector.name in ATS_SOURCES
-            ):
-                try:
-                    apply_missing_sweep(
-                        session, collector.name, run_id, settings.missing_run_threshold
+
+            if collector.budget is not None:
+                stats.pages_visited = collector.budget.page_visits
+                stats.details_visited = collector.budget.detail_visits
+                if stats.stopped_reason is None and not collector.budget.page_allowed():
+                    stats.stopped_reason = "visit_budget"
+                    logger.info("collector %s stopped: visit budget reached", collector.name)
+
+            # Per-board missing sweep: only boards that were read completely
+            # and successfully may close their missing jobs.
+            if settings.board_sweep_enabled and collector.name in ATS_SOURCES:
+                complete_ids = [
+                    board_id
+                    for (source, token), board_id in board_map.items()
+                    if source == collector.name
+                    and token in collector.complete_boards
+                    and collector.board_outcomes.get(token) is True
+                ]
+                if complete_ids:
+                    try:
+                        apply_board_missing_sweep(
+                            session, complete_ids, run_id, settings.missing_run_threshold
+                        )
+                    except Exception:  # noqa: BLE001 - never fail the run for this
+                        session.rollback()
+                        logger.exception("missing sweep failed for %s", collector.name)
+                failed_boards = [
+                    token for token, ok in collector.board_outcomes.items() if ok is False
+                ]
+                if failed_boards and not collector.complete_boards:
+                    # Every known board failed (or none completed): the run
+                    # proved nothing about the source — retryable, not success.
+                    detail = "; ".join(
+                        f"{token}: {collector.board_errors.get(token, 'failed')}"
+                        for token in sorted(failed_boards)[:3]
                     )
-                except Exception:  # noqa: BLE001 - never fail the run for this
-                    session.rollback()
-                    logger.exception("missing sweep failed for %s", collector.name)
-            _finish_run(session, run_id, "success", stats)
-        except Exception as exc:  # noqa: BLE001 - one source must not kill the run
+                    raise RetryableCollectorError(
+                        f"all {len(failed_boards)} board(s) failed — {detail}"
+                    )
+
+            if stats.outcome == "success" and (
+                stats.stopped_reason
+                or stats.errors
+                or any(ok is False for ok in collector.board_outcomes.values())
+            ):
+                stats.outcome = "partial"
+            _finish_run(session, run_id, stats.outcome, stats)
+        except AccessBlockedError as exc:
             session.rollback()
             stats.error = f"{type(exc).__name__}: {exc}"
-            logger.exception("collector %s failed", collector.name)
-            _finish_run(session, run_id, "error", stats)
-    record_run(collector.name, "error" if stats.error else "success", stats.as_dict())
+            stats.outcome = "blocked"
+            logger.error("collector %s blocked: %s", collector.name, stats.error)
+            if settings.pause_on_challenge:
+                try:
+                    pause_source(session, collector.name, "challenge", stats.error)
+                except Exception:  # noqa: BLE001
+                    session.rollback()
+                    logger.exception("failed to pause %s after challenge", collector.name)
+            _finish_run(session, run_id, "blocked", stats)
+        except Exception as exc:  # noqa: BLE001 - classify, record, maybe retry
+            session.rollback()
+            outcome, retry_after = classify_exception(exc)
+            stats.error = f"{type(exc).__name__}: {exc}"
+            stats.outcome = outcome
+            stats.retry_after = retry_after
+            logger.exception("collector %s failed (%s)", collector.name, outcome)
+            _finish_run(session, run_id, outcome, stats)
+            if outcome == "retryable":
+                # Let the Celery task retry; keep the classified error intact.
+                raise RetryableCollectorError(stats.error) from exc
+
+    if collector.budget is not None and stats.pages_visited == 0:
+        stats.pages_visited = collector.budget.page_visits
+        stats.details_visited = collector.budget.detail_visits
+    record_run(collector.name, stats.outcome, stats.as_dict())
     logger.info("collector %s done: %s", collector.name, stats.as_dict())
     return stats
 
@@ -349,7 +568,10 @@ async def run_collectors(
     per_source: list[RunStats] = []
     total = RunStats(source="total")
     for collector in collectors:
-        stats = await run_collector(collector, params, session_factory)
+        try:
+            stats = await run_collector(collector, params, session_factory)
+        except RetryableCollectorError as exc:
+            stats = RunStats(source=collector.name, outcome="retryable", error=str(exc))
         per_source.append(stats)
         total.merge(stats)
     return per_source, total

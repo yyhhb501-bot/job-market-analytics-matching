@@ -194,6 +194,10 @@ services:
       API_BASE_URL: http://api:8000
       API_KEY: ${API_KEY:-}
       NEXT_PUBLIC_API_BASE_URL: ${PUBLIC_API_URL:-https://${PUBLIC_DOMAIN:-localhost}}
+      # Separate operator login for administrative pages.
+      WEB_UI_PASSWORD: ${WEB_UI_PASSWORD:-}
+      WEB_UI_USERNAME: ${WEB_UI_USERNAME:-admin}
+      SESSION_SECRET: ${SESSION_SECRET:-}
     networks: [jobnet]
     depends_on:
       api:

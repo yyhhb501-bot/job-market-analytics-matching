@@ -10,9 +10,11 @@ from apps.api.ratelimit import rate_limit
 from apps.api.security import require_api_key
 
 
-def test_require_api_key_is_noop_when_unset(monkeypatch):
+def test_require_api_key_fails_closed_when_unset(monkeypatch):
     monkeypatch.setattr("apps.api.security.get_settings", lambda: Settings(api_key=None))
-    require_api_key(None)
+    with pytest.raises(HTTPException) as exc:
+        require_api_key(None)
+    assert exc.value.status_code == 503
 
 
 def test_require_api_key_enforced(monkeypatch):

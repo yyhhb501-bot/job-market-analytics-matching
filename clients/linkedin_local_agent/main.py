@@ -21,6 +21,7 @@ import json
 import logging
 import random
 import time
+from dataclasses import replace
 from pathlib import Path
 
 from clients.linkedin_local_agent.browser.challenge import guard
@@ -64,6 +65,92 @@ def _exclusions_by_group(config: AgentConfig) -> dict[str, list[str]]:
     return {group.name: group.exclusions for group in config.occupation_groups}
 
 
+COUNTRY_ALIASES = {
+    "united states": "US",
+    "united states of america": "US",
+    "usa": "US",
+    "us": "US",
+    "america": "US",
+    "australia": "AU",
+    "au": "AU",
+}
+
+
+def _country_matches(needle: str, country: str) -> bool:
+    """Match a country by ISO code or by common name (``United States`` -> US)."""
+    country_code = (country or "").lower()
+    if needle == country_code:
+        return True
+    alias = COUNTRY_ALIASES.get(needle)
+    return alias is not None and alias.lower() == country_code
+
+
+def scope_queries(
+    config: AgentConfig,
+    *,
+    country: str | None = None,
+    city: str | None = None,
+    keyword: str | None = None,
+    channel: str | None = None,
+) -> list[Query]:
+    """Narrow the query matrix to a manual small run.
+
+    Filters are case-insensitive substring matches so a manual task can target,
+    e.g. ``--country "United States" --keyword "Data Analyst"`` without editing
+    the config. An empty result is an error the caller must surface: silently
+    running zero queries would look like a successful collection.
+    """
+    queries = build_queries(config)
+    if country:
+        needle = country.strip().lower()
+        queries = [q for q in queries if _country_matches(needle, q.country)]
+    if city:
+        needle = city.strip().lower()
+        queries = [q for q in queries if needle in (q.city or "").lower()]
+    if keyword:
+        needle = keyword.strip().lower()
+        queries = [q for q in queries if needle in q.keyword.lower()]
+    if channel:
+        needle = channel.strip().lower()
+        queries = [q for q in queries if needle == (q.channel or "").lower()]
+    return queries
+
+
+def collect_status(config: AgentConfig) -> dict:
+    """Local run state for ``--status`` (no browser, no network)."""
+    data_dir = config.storage.resolved_data_dir
+    seen = SeenStore.load(data_dir / "seen.json")
+    checkpoint = Checkpoint.load(data_dir / "checkpoint.json")
+
+    states: dict[str, int] = {}
+    for entry in seen.entries.values():
+        status = entry.get("status") if isinstance(entry, dict) else str(entry)
+        states[status] = states.get(status, 0) + 1
+
+    token_env = config.device_token_env
+    return {
+        "data_dir": str(data_dir),
+        "config": {
+            "occupation_groups": [group.name for group in config.occupation_groups],
+            "centers": [
+                f"{center.city or center.state or center.country} ({center.country})"
+                for center in config.centers
+            ],
+            "countries": [country.country for country in config.countries],
+        },
+        "queries": len(build_queries(config)),
+        "device_token_env": token_env,
+        "device_token_set": config.resolve_token() is not None,
+        "seen_keys_tracked": len(seen.entries),
+        "seen_by_status": dict(sorted(states.items())),
+        "checkpoint": {
+            "completed_pages": len(checkpoint.completed_pages),
+            "uploaded_job_ids": len(checkpoint.uploaded_job_ids),
+            "stats": dict(sorted(checkpoint.stats.items())),
+        },
+    }
+
+
 def config_problems(config: AgentConfig) -> list[str]:
     """Pre-flight checks that stop a run before it searches the wrong area."""
     problems: list[str] = []
@@ -101,8 +188,13 @@ class LocalCollector:
         # Read the source *after* any challenge is cleared so we parse real content.
         return driver.page_source
 
-    def collect(self, driver, max_queries: int | None = None) -> list[JobStub]:
-        queries = build_queries(self.config)
+    def collect(
+        self,
+        driver,
+        max_queries: int | None = None,
+        queries: list[Query] | None = None,
+    ) -> list[JobStub]:
+        queries = list(queries if queries is not None else build_queries(self.config))
         if max_queries:
             queries = queries[:max_queries]
         accepted: list[JobStub] = []
@@ -228,7 +320,46 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--list-queries", action="store_true", help="print queries and exit")
     parser.add_argument("--reset-checkpoint", action="store_true", help="clear resume state")
     parser.add_argument("--verbose", action="store_true")
+
+    manual = parser.add_argument_group("manual scoped run (no config edit needed)")
+    manual.add_argument("--country", help="only queries for this country, e.g. 'United States'")
+    manual.add_argument("--city", help="only queries for this city, e.g. 'Melbourne'")
+    manual.add_argument("--keyword", help="only queries whose keyword contains this text")
+    manual.add_argument("--channel", choices=["local", "remote"], help="only this channel")
+    manual.add_argument("--pages", type=int, default=None, help="max search pages per query")
+    manual.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="max jobs to fetch details for / upload (small manual task)",
+    )
+
+    status = parser.add_argument_group("status")
+    status.add_argument(
+        "--status",
+        action="store_true",
+        help="print local run state as JSON and exit (no browser, no network)",
+    )
     return parser
+
+
+def _apply_overrides(config: AgentConfig, args: argparse.Namespace) -> AgentConfig:
+    """Apply CLI limits on top of the config file (without mutating it)."""
+    if args.pages is None and args.limit is None:
+        return config
+    search = config.search
+    return replace(
+        config,
+        search=replace(
+            search,
+            max_pages_per_query=(
+                max(args.pages, 0) if args.pages is not None else search.max_pages_per_query
+            ),
+            max_detail_fetches=(
+                max(args.limit, 0) if args.limit is not None else search.max_detail_fetches
+            ),
+        ),
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -239,8 +370,29 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     config = load_config(args.config)
+
+    if args.status:
+        print(json.dumps(collect_status(config), ensure_ascii=False, indent=2))
+        return 0
+
+    scoped = scope_queries(
+        config,
+        country=args.country,
+        city=args.city,
+        keyword=args.keyword,
+        channel=args.channel,
+    )
+    if args.country or args.city or args.keyword or args.channel:
+        if not scoped:
+            logger.error(
+                "no queries match --country/--city/--keyword/--channel; check the values "
+                "against the configured occupation groups and locations (--list-queries)"
+            )
+            return 2
+        logger.info("manual scope selected %s of the configured queries", len(scoped))
+
     if args.list_queries:
-        for query in build_queries(config):
+        for query in scoped:
             print(query.label)
         return 0
 
@@ -250,6 +402,7 @@ def main(argv: list[str] | None = None) -> int:
             logger.error("config: %s", problem)
         return 2
 
+    config = _apply_overrides(config, args)
     collector = LocalCollector(config, dry_run=args.dry_run)
     if args.reset_checkpoint:
         collector.checkpoint.reset()
@@ -258,7 +411,7 @@ def main(argv: list[str] | None = None) -> int:
     driver = create_driver(config.browser)
     try:
         ensure_logged_in(driver, config.browser.challenge_timeout)
-        accepted = collector.collect(driver, max_queries=args.max_queries)
+        accepted = collector.collect(driver, max_queries=args.max_queries, queries=scoped)
         logger.info("discovered %s new accepted jobs", len(accepted))
         collected = collector.fetch_details(driver, accepted)
         logger.info("fetched %s full job descriptions", len(collected))

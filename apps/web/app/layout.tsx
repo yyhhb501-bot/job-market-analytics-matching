@@ -27,6 +27,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <Link href="/alerts">告警</Link>
               <Link href="/boards">公司看板</Link>
               <Link href="/status">运行状态</Link>
+              <Link href="/admin/imports">采集数据库</Link>
+              <Link href="/login">会员登录</Link>
+              <Link href="/register">手机号注册</Link>
             </nav>
           </div>
         </header>

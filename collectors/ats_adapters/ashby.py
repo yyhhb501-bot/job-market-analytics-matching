@@ -10,7 +10,12 @@ import logging
 from collections.abc import AsyncIterator
 
 from collectors.ats_adapters.config import load_board_tokens
-from collectors.base import BaseCollector, SearchParams
+from collectors.base import (
+    AccessBlockedError,
+    BaseCollector,
+    RateLimitedError,
+    SearchParams,
+)
 from collectors.utils import (
     infer_country,
     parse_datetime,
@@ -36,13 +41,19 @@ class AshbyCollector(BaseCollector):
             return
         async with self._client() as client:
             for org in orgs:
+                if not await self._pre_request():
+                    return
                 try:
-                    response = await client.get(
-                        self.BASE_URL.format(org=org), params={"includeCompensation": "true"}
+                    payload = await self._board_json(
+                        client,
+                        self.BASE_URL.format(org=org),
+                        board=org,
+                        params={"includeCompensation": "true"},
                     )
-                    response.raise_for_status()
-                    payload = response.json()
+                except (RateLimitedError, AccessBlockedError):
+                    raise
                 except Exception as exc:  # noqa: BLE001
+                    self._note_board_failure(org, exc)
                     logger.warning("ashby: board %s failed: %s", org, exc)
                     continue
                 for raw in payload.get("jobs", []):

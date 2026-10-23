@@ -70,6 +70,9 @@ services:
       DATABASE_URL: postgresql+psycopg://jobuser:jobpass@postgres:5432/jobs
       REDIS_URL: redis://redis:6379/0
       OPENSEARCH_URL: http://opensearch:9200
+      NIGHTLY_IMPORT_ENABLED: "true"
+      NIGHTLY_IMPORT_HOUR: "23"
+      NIGHTLY_IMPORT_MINUTE: "0"
     volumes:
       - ./:/app
     depends_on:
@@ -86,6 +89,9 @@ services:
       DATABASE_URL: postgresql+psycopg://jobuser:jobpass@postgres:5432/jobs
       REDIS_URL: redis://redis:6379/0
       OPENSEARCH_URL: http://opensearch:9200
+      NIGHTLY_IMPORT_ENABLED: "true"
+      NIGHTLY_IMPORT_HOUR: "23"
+      NIGHTLY_IMPORT_MINUTE: "0"
     volumes:
       - ./:/app
     depends_on:
@@ -98,6 +104,7 @@ services:
     image: node:22-alpine
     working_dir: /app/apps/web
     command: sh -c "npm install && npm run dev -- --hostname 0.0.0.0"
+    env_file: .env
     environment:
       API_BASE_URL: http://api:8000
       API_KEY: ${API_KEY:-}
@@ -109,6 +116,18 @@ services:
       - ./:/app
       - web_node_modules:/app/apps/web/node_modules
       - web_next:/app/apps/web/.next
+    depends_on:
+      - api
+
+  linkedin-importer:
+    image: jobseek-api:latest
+    command: python scripts/watch_linkedin_downloads.py --downloads /downloads --interval 10
+    env_file: .env
+    environment:
+      JOBAGG_API_BASE_URL: http://api:8000
+    volumes:
+      - ./:/app
+      - ${USERPROFILE}/Downloads:/downloads
     depends_on:
       - api
 

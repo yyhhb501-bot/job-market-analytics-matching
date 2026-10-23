@@ -1,18 +1,22 @@
-"""SEEK Australia adapter (opt-in, rate-limited).
+"""Legacy SEEK Australia server-side adapter (disabled by default).
 
-Approach borrowed conceptually from community projects such as SeekSpider, but
-re-implemented as a standalone, low-frequency adapter. No login, no cookies, no
-captcha handling, no proxy rotation: only the public search JSON endpoint at a
-conservative request rate.
+The former public search endpoint returned HTTP 404 when checked on 2026-09-21.
+Keep ``ENABLE_SEEK=false`` and use the user-triggered local browser extension in
+``clients/seek_edge_extension`` unless SEEK has granted written/API access.
 """
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from collections.abc import AsyncIterator
 
-from collectors.base import BaseCollector, SearchParams
+from apps.api.config import Settings
+from collectors.base import (
+    AccessBlockedError,
+    BaseCollector,
+    RateLimitedError,
+    SearchParams,
+)
 from collectors.utils import (
     parse_datetime,
     parse_salary_range,
@@ -31,8 +35,12 @@ class SeekCollector(BaseCollector):
     SEARCH_URL = "https://www.seek.com.au/api/chalice-search/v4/search"
     PAGE_SIZE = 30
 
+    def __init__(self, settings: Settings) -> None:
+        super().__init__(settings)
+        # SEEK's documented rate floor: space requests via the shared throttle.
+        self.min_interval_seconds = 60.0 / max(self.settings.seek_requests_per_minute, 1)
+
     async def stream(self, params: SearchParams) -> AsyncIterator[NormalizedJob]:
-        interval = 60.0 / max(self.settings.seek_requests_per_minute, 1)
         where = params.location or "All Australia"
         keywords = params.keywords or ""
         collected = 0
@@ -41,6 +49,8 @@ class SeekCollector(BaseCollector):
 
         async with self._client(headers=headers) as client:
             while collected < params.results_wanted:
+                if not await self._pre_request():
+                    return
                 query = {
                     "siteKey": "AU-Main",
                     "sourcesystem": "houston",
@@ -51,12 +61,14 @@ class SeekCollector(BaseCollector):
                     "locale": "en-AU",
                 }
                 try:
-                    response = await client.get(self.SEARCH_URL, params=query)
-                    response.raise_for_status()
-                    payload = response.json()
+                    payload = await self._board_json(
+                        client, self.SEARCH_URL, board="search", params=query, headers=headers
+                    )
+                except (RateLimitedError, AccessBlockedError):
+                    raise
                 except Exception as exc:  # noqa: BLE001
                     logger.warning("seek: page %s failed: %s", page, exc)
-                    break
+                    return
 
                 rows = payload.get("data") or []
                 if not rows:
@@ -69,7 +81,6 @@ class SeekCollector(BaseCollector):
                         if collected >= params.results_wanted:
                             break
                 page += 1
-                await asyncio.sleep(interval)
 
     def _parse(self, raw: dict) -> NormalizedJob | None:
         job_id = raw.get("id") or raw.get("jobId")

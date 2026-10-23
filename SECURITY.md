@@ -7,14 +7,22 @@ defaults but a few decisions are deployment responsibilities.
 
 - **Set `API_KEY` before exposing the API beyond localhost.** When set, all
   write endpoints (create/update/delete/run saved searches, `POST /match`)
-  require the `X-API-Key` header. When unset they are open, which is intended
-  for local development only.
+  require the `X-API-Key` header. When unset, those endpoints **fail closed**
+  (HTTP 503) — they are not silently open.
 - The browser never holds the key. Client-initiated writes go to the same-origin
   Next.js route handler (`app/api/proxy/[...path]`), which attaches the
   server-only `API_KEY` before calling FastAPI. Do **not** reintroduce a
   `NEXT_PUBLIC_API_KEY`: every `NEXT_PUBLIC_*` value is shipped to the browser.
-- For multi-user use, replace the shared key with real login/session/JWT and
-  per-user ownership, or put the API behind an authenticating reverse proxy.
+- **Members register and log in with a verified phone number.** `/register` and
+  `/login` use SMS one-time codes; the API stores E.164 phone identity and saved
+  searches are scoped to the signed-in member. Configure `SMS_PROVIDER=twilio`,
+  `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_VERIFY_SERVICE_SID`, and a
+  long random `SESSION_SECRET` before enabling registration.
+- **The operator account remains separate.** `/admin/login` uses
+  `WEB_UI_USERNAME` and `WEB_UI_PASSWORD`. Administrative proxy routes require
+  an operator session; member sessions can access only member saved-search and
+  résumé-match routes. Cross-site state-changing requests are rejected by an
+  Origin check and `SameSite=Lax` cookies.
 - In `ENVIRONMENT=production` the API **refuses to start** if any of these are
   unsafe: `API_KEY` unset, `CORS_ORIGINS=*`, a default/weak database password,
   `WEBHOOK_ALLOW_PRIVATE=true`, or `AUTO_CREATE_TABLES=true`. See
@@ -26,8 +34,8 @@ defaults but a few decisions are deployment responsibilities.
 
 - In-process sliding-window rate limits apply to `POST /match`, saved-search
   `run`, and export (`RATE_LIMIT_PER_MINUTE`, `MATCH_RATE_LIMIT_PER_MINUTE`).
-  Empty `API_KEY` plus a public port is the main risk. For multiple replicas,
-  back the limiter with Redis.
+  A missing `API_KEY` plus a public port is the main risk (writes fail closed
+  without it). For multiple replicas, back the limiter with Redis.
 
 ## Outbound webhooks (SSRF)
 

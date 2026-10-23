@@ -15,7 +15,12 @@ import logging
 from collections.abc import AsyncIterator
 
 from collectors.ats_adapters.config import load_board_entries
-from collectors.base import BaseCollector, SearchParams
+from collectors.base import (
+    AccessBlockedError,
+    BaseCollector,
+    RateLimitedError,
+    SearchParams,
+)
 from collectors.utils import (
     country_from_name,
     normalize_employment_type,
@@ -51,13 +56,19 @@ class JobviteCollector(BaseCollector):
 
         async with self._client() as client:
             for entry in entries:
+                if not await self._pre_request():
+                    return
                 try:
-                    response = await client.get(
-                        FEED_URL, params={"api": entry["api"], "sc": entry["sc"]}
+                    payload = await self._board_json(
+                        client,
+                        FEED_URL,
+                        board=str(entry.get("site") or entry["api"]),
+                        params={"api": entry["api"], "sc": entry["sc"]},
                     )
-                    response.raise_for_status()
-                    payload = response.json()
+                except (RateLimitedError, AccessBlockedError):
+                    raise
                 except Exception as exc:  # noqa: BLE001
+                    self._note_board_failure(str(entry.get("site") or entry["api"]), exc)
                     logger.warning("jobvite: %s failed: %s", entry.get("site"), exc)
                     continue
 

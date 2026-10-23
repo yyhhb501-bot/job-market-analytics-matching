@@ -10,7 +10,12 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncIterator
 
-from collectors.base import BaseCollector, SearchParams
+from collectors.base import (
+    AccessBlockedError,
+    BaseCollector,
+    RateLimitedError,
+    SearchParams,
+)
 from collectors.utils import infer_country, parse_datetime, parse_salary_number, strip_html, trim
 from packages.job_schema import NormalizedJob, RemoteType, Source
 
@@ -25,10 +30,14 @@ class RemoteOKCollector(BaseCollector):
 
     async def stream(self, params: SearchParams) -> AsyncIterator[NormalizedJob]:
         async with self._client() as client:
+            if not await self._pre_request():
+                return
             try:
                 response = await client.get(FEED_URL)
-                response.raise_for_status()
+                self._raise_for_status(response)
                 payload = response.json()
+            except (RateLimitedError, AccessBlockedError):
+                raise
             except Exception as exc:  # noqa: BLE001
                 logger.warning("remoteok: feed failed: %s", exc)
                 return

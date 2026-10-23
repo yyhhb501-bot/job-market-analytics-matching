@@ -1,9 +1,11 @@
 """Authentication for write endpoints.
 
-``require_api_key`` guards administrative endpoints. ``require_device_token``
-guards the local-collector import API: each device carries its own high-entropy
-bearer token (only its SHA-256 hash is stored) that can be revoked without
-touching the operator API key.
+``require_api_key`` guards administrative endpoints and fails closed: when
+``API_KEY`` is not configured the guarded endpoints return 503 instead of
+serving unauthenticated writes. ``require_device_token`` guards the
+local-collector import API: each device carries its own high-entropy bearer
+token (only its SHA-256 hash is stored) that can be revoked without touching
+the operator API key.
 """
 
 from __future__ import annotations
@@ -25,7 +27,13 @@ DEVICE_TOKEN_PREFIX = "jagg_"
 def require_api_key(x_api_key: str | None = Header(default=None, alias="X-API-Key")) -> None:
     settings = get_settings()
     if not settings.api_key:
-        return
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "API key is not configured on the server; "
+                "authenticated endpoints are disabled"
+            ),
+        )
     if not x_api_key or not secrets.compare_digest(x_api_key, settings.api_key):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

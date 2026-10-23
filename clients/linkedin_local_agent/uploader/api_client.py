@@ -51,6 +51,12 @@ class ImportClient:
     def close(self) -> None:
         self._client.close()
 
+    def observe(self, observations: list[dict]) -> dict:
+        response = self._client.post('/api/v1/import/observations', json={'observations': observations})
+        if response.status_code >= 400:
+            raise UploadError(response.status_code, response.text[:500])
+        return response.json()
+
     def __enter__(self) -> ImportClient:
         return self
 

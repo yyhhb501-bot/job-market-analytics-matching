@@ -70,12 +70,20 @@ async def match_jobs(payload: MatchRequest, db: Session = Depends(get_db)) -> Ma
     for job in jobs:
         local = match_resume(job, payload.resume)
         semantic_score: float | None = None
-        score = int(local["score"])
         if resume_embedding is not None and job.embedding:
             semantic_score = round(max(0.0, cosine(resume_embedding, job.embedding)) * 100, 1)
-            score = round(
-                SEMANTIC_WEIGHT * semantic_score + (1 - SEMANTIC_WEIGHT) * local["score"]
-            )
+
+        kw_cov = local.get("keyword_coverage_score", float(local["score"]))
+        title_wt = local.get("title_weight_score", 0.0)
+        rec_sc = local.get("recency_score", 50.0)
+
+        # Ranked by feature hashing cosine similarity, keyword coverage, title weight, and recency
+        if semantic_score is not None:
+            blended = 0.40 * semantic_score + 0.30 * kw_cov + 0.15 * title_wt + 0.15 * rec_sc
+        else:
+            blended = 0.55 * kw_cov + 0.25 * title_wt + 0.20 * rec_sc
+
+        score = min(100, max(0, round(blended)))
         scored.append((score, job, local, semantic_score))
     scored.sort(key=lambda item: item[0], reverse=True)
 
@@ -110,6 +118,9 @@ async def match_jobs(payload: MatchRequest, db: Session = Depends(get_db)) -> Ma
             shared_keywords=local["shared_keywords"],
             semantic_score=semantic_score,
             rerank_score=rerank_score,
+            keyword_coverage_score=local.get("keyword_coverage_score"),
+            title_weight_score=local.get("title_weight_score"),
+            recency_score=local.get("recency_score"),
         )
         for score, job, local, semantic_score, rerank_score in final[: payload.limit]
     ]

@@ -11,7 +11,12 @@ import logging
 from collections.abc import AsyncIterator
 
 from collectors.ats_adapters.config import load_board_entries
-from collectors.base import BaseCollector, SearchParams
+from collectors.base import (
+    AccessBlockedError,
+    BaseCollector,
+    RateLimitedError,
+    SearchParams,
+)
 from collectors.utils import (
     country_from_name,
     infer_country,
@@ -49,11 +54,16 @@ class BambooHRCollector(BaseCollector):
         async with self._client() as client:
             for company, domain in entries:
                 base = f"https://{company}.{domain}"
+                if not await self._pre_request():
+                    return
                 try:
-                    response = await client.get(f"{base}/careers/list")
-                    response.raise_for_status()
-                    payload = response.json()
+                    payload = await self._board_json(
+                        client, f"{base}/careers/list", board=company
+                    )
+                except (RateLimitedError, AccessBlockedError):
+                    raise
                 except Exception as exc:  # noqa: BLE001
+                    self._note_board_failure(company, exc)
                     logger.warning("bamboohr: %s failed: %s", company, exc)
                     continue
 
@@ -67,9 +77,11 @@ class BambooHRCollector(BaseCollector):
     async def _fetch_detail(self, client, base: str, job_id) -> dict | None:
         if job_id is None:
             return None
+        if not await self._note_detail():
+            return None
         try:
             response = await client.get(f"{base}/careers/{job_id}/detail")
-            response.raise_for_status()
+            self._raise_for_status(response)
             return response.json()
         except Exception as exc:  # noqa: BLE001
             logger.debug("bamboohr: detail %s failed: %s", job_id, exc)

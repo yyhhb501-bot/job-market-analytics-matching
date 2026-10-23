@@ -3,6 +3,9 @@ export type Job = {
   source: string;
   source_job_id: string;
   title: string;
+  is_active?: boolean;
+  review_status?: string | null;
+  last_checked_at?: string | null;
   company: string | null;
   description: string | null;
   canonical_url: string | null;
@@ -33,6 +36,24 @@ export type JobSearchResponse = {
   total: number;
   page: number;
   page_size: number;
+};
+
+export type ImportAdminData = {
+  summary: { total_jobs: number; total_batches: number; devices: number; latest_import_at: string | null; by_country: Record<string, number>; seek: {
+    today_valid: number; today_target: number; hour_valid: number; hour_limit: number; recent_7d_valid: number;
+    by_state: Record<string, number>; by_specialty: Record<string, number>; salary_rate: number;
+    visa_sponsorship_count: number; duplicate_count: number; rejected_count: number;
+    last_success_at: string | null; status: string; next_run_at: string | null;
+  } };
+  jobs: { total: number; page: number; page_size: number; items: Array<{
+    job: Job; batch_id: number; action: string; collected_at: string | null; imported_at: string;
+    device: { id: number; name: string; owner: string };
+  }> };
+  batches: Array<{
+    id: number; device: { id: number; name: string }; status: string; received_count: number;
+    accepted_count: number; duplicate_count: number; rejected_count: number;
+    started_at: string; completed_at: string | null; error: string | null;
+  }>;
 };
 
 export type SourceInfo = {
@@ -347,6 +368,9 @@ export type MatchResult = {
   shared_keywords: string[];
   semantic_score: number | null;
   rerank_score: number | null;
+  keyword_coverage_score?: number | null;
+  title_weight_score?: number | null;
+  recency_score?: number | null;
 };
 
 export type MatchResponse = {
@@ -373,6 +397,14 @@ async function clientJson<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(`API request failed (${response.status}) for ${path}`);
   }
   return (await response.json()) as T;
+}
+
+export function getImportAdmin(page = 1, q = "", country = "", jobStatus = "active"): Promise<ImportAdminData> {
+  const params = new URLSearchParams({ page: String(page) });
+  if (q.trim()) params.set("q", q.trim());
+  if (country.trim()) params.set("country", country.trim());
+  params.set("job_status", jobStatus);
+  return getJson<ImportAdminData>(`/api/v1/import/admin?${params}`);
 }
 
 export function createSavedSearch(payload: SavedSearchInput): Promise<SavedSearch> {
@@ -460,6 +492,55 @@ export function matchResume(
       country: options.country || null,
       remote_type: options.remoteType || null,
     }),
+  });
+}
+
+export type CollectorControlStatus = {
+  source: string;
+  paused: boolean;
+  pause_reason: string | null;
+  paused_at: string | null;
+  note: string | null;
+  last_run: {
+    id: number;
+    status: string;
+    stopped_reason: string | null;
+    jobs_inserted: number;
+    error: string | null;
+    started_at: string | null;
+    finished_at: string | null;
+  } | null;
+  today_page_visits: number;
+  today_detail_visits: number;
+  daily_page_visit_limit: number;
+  daily_detail_visit_limit: number;
+};
+
+export type CollectorStatus = {
+  weekly: {
+    target: number;
+    new_jobs: number;
+    by_source: Record<string, number>;
+    week_start: string;
+  };
+  sources: CollectorControlStatus[];
+};
+
+export function getCollectorStatus(): Promise<CollectorStatus> {
+  return getJson<CollectorStatus>("/api/v1/collector/status");
+}
+
+export function pauseCollector(source: string, reason = "manual"): Promise<unknown> {
+  return clientJson(`/api/proxy/collector/${encodeURIComponent(source)}/pause`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export function resumeCollector(source: string): Promise<unknown> {
+  return clientJson(`/api/proxy/collector/${encodeURIComponent(source)}/resume`, {
+    method: "POST",
   });
 }
 

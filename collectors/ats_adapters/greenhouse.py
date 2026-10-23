@@ -10,7 +10,12 @@ import logging
 from collections.abc import AsyncIterator
 
 from collectors.ats_adapters.config import load_board_tokens
-from collectors.base import BaseCollector, SearchParams
+from collectors.base import (
+    AccessBlockedError,
+    BaseCollector,
+    RateLimitedError,
+    SearchParams,
+)
 from collectors.utils import infer_country, parse_datetime, split_location, strip_html, trim
 from packages.job_schema import NormalizedJob, RemoteType, Source
 
@@ -29,13 +34,19 @@ class GreenhouseCollector(BaseCollector):
             return
         async with self._client() as client:
             for token in tokens:
+                if not await self._pre_request():
+                    return
                 try:
-                    response = await client.get(
-                        self.BASE_URL.format(token=token), params={"content": "true"}
+                    payload = await self._board_json(
+                        client,
+                        self.BASE_URL.format(token=token),
+                        board=token,
+                        params={"content": "true"},
                     )
-                    response.raise_for_status()
-                    payload = response.json()
+                except (RateLimitedError, AccessBlockedError):
+                    raise
                 except Exception as exc:  # noqa: BLE001 - keep going across boards
+                    self._note_board_failure(token, exc)
                     logger.warning("greenhouse: board %s failed: %s", token, exc)
                     continue
                 for raw in payload.get("jobs", []):

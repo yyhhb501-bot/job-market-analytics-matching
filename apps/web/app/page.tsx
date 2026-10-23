@@ -1,4 +1,5 @@
 import { JobCard } from "@/components/JobCard";
+import Link from "next/link";
 import { SaveSearchForm } from "@/components/SaveSearchForm";
 import { SearchForm } from "@/components/SearchForm";
 import {
@@ -78,11 +79,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<Sea
   return (
     <>
       <section className="hero">
-        <h1>在美国和澳大利亚找工作</h1>
-        <p>一站式搜索公开 ATS 职位板、USAJOBS、SEEK、Indeed、Glassdoor 与 Adzuna。</p>
+        <h1>职位搜索</h1>
+        <p>搜索美国和澳大利亚的职位。可按来源、城市、工作方式和薪资筛选。</p>
         {stats ? (
           <p className="hero-stats">
-            已收录 {stats.total_jobs.toLocaleString()} 个职位
+            可公开展示 {stats.total_jobs.toLocaleString()} 个职位
             {countrySummary ? ` · ${countrySummary}` : ""}
           </p>
         ) : null}
@@ -115,9 +116,17 @@ export default async function Home({ searchParams }: { searchParams: Promise<Sea
       </div>
 
       {data.items.length === 0 ? (
-        <p className="empty" data-testid="results-empty">
-          没有符合条件的职位。
-        </p>
+        <div className="empty" data-testid="results-empty">
+          {stats?.total_jobs === 0 ? (
+            <>
+              <p>目前没有获准公开展示的职位。</p>
+              <p>扩展采集的数据保存在私有采集库，公开搜索不会显示这些记录。</p>
+              <Link href={`/admin/imports${values.q ? `?q=${encodeURIComponent(values.q)}` : ""}`}>搜索采集数据库</Link>
+            </>
+          ) : (
+            <p>没有符合当前搜索条件的公开职位。</p>
+          )}
+        </div>
       ) : (
         <div className="job-grid" data-testid="job-grid">
           {data.items.map((job) => (

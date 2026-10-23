@@ -44,6 +44,14 @@ celery_app.conf.update(
 )
 
 beat_schedule: dict = {}
+if settings.nightly_import_enabled:
+    beat_schedule["nightly-local-import"] = {
+        "task": "jobagg.nightly_local_import",
+        "schedule": crontab(
+            minute=settings.nightly_import_minute,
+            hour=settings.nightly_import_hour,
+        ),
+    }
 if str(settings.collect_schedule).lower() == "interval":
     beat_schedule["collect-and-alert"] = {
         "task": "jobagg.collect_all",
@@ -76,6 +84,13 @@ if settings.collect_hot_keywords:
         "task": "jobagg.collect_scope",
         "schedule": timedelta(hours=max(settings.collect_hot_interval_hours, 1)),
         "args": ("hot",),
+    }
+# Bounded API-backed Australia RN plan. It is absent unless explicitly
+# enabled; SEEK is never added here because its local extension is manual.
+if settings.au_nurse_plan_enabled:
+    beat_schedule["au-nurse-plan"] = {
+        "task": "jobagg.collect_au_nurse_plan",
+        "schedule": timedelta(minutes=max(settings.au_nurse_plan_interval_minutes, 60)),
     }
 # Re-verify boards daily so dead boards can be paused.
 beat_schedule["daily-verify-boards"] = {

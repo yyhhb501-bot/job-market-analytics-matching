@@ -8,6 +8,8 @@ from sqlalchemy import (
     JSON,
     BigInteger,
     Boolean,
+    CheckConstraint,
+    Date,
     DateTime,
     Float,
     ForeignKey,
@@ -47,6 +49,9 @@ class Job(Base):
     # identity / provenance
     source: Mapped[str] = mapped_column(String(50), index=True)
     source_job_id: Mapped[str] = mapped_column(String(255))
+    source_board_id: Mapped[int | None] = mapped_column(
+        bigint_pk(), ForeignKey("boards.id", ondelete="RESTRICT"), index=True
+    )
     canonical_url: Mapped[str | None] = mapped_column(Text)
     apply_url: Mapped[str | None] = mapped_column(Text)
 
@@ -176,6 +181,53 @@ class CollectorRun(Base):
         DateTime(timezone=True), default=utcnow, server_default=func.now()
     )
     finished_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    # Why the run ended early: "visit_budget" | "time_budget" | None.
+    stopped_reason: Mapped[str | None] = mapped_column(String(30))
+    # Actual upstream visits (page/detail) observed during the run.
+    pages_visited: Mapped[int] = mapped_column(Integer, default=0)
+    details_visited: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class SourceControl(Base):
+    """Operator control for one collection source.
+
+    ``paused=True`` stops all collection for the source until resumed. The
+    pipeline sets ``pause_reason="challenge"`` automatically when a source
+    hits an access block (CAPTCHA/403/login wall) and ``PAUSE_ON_CHALLENGE``
+    is enabled; resuming is always a manual action.
+    """
+
+    __tablename__ = "source_controls"
+
+    id: Mapped[int] = mapped_column(bigint_pk(), primary_key=True, autoincrement=True)
+    source: Mapped[str] = mapped_column(String(50), unique=True, index=True)
+    paused: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    pause_reason: Mapped[str | None] = mapped_column(String(30))
+    paused_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    resume_after: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    note: Mapped[str | None] = mapped_column(Text)
+    updated_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, server_default=func.now(), onupdate=utcnow
+    )
+
+
+class SourceVisitCounter(Base):
+    """Daily upstream visit counters for one source (visit-budget backing)."""
+
+    __tablename__ = "source_visit_counters"
+
+    id: Mapped[int] = mapped_column(bigint_pk(), primary_key=True, autoincrement=True)
+    source: Mapped[str] = mapped_column(String(50), index=True)
+    day: Mapped[dt.date] = mapped_column(Date, index=True)
+    page_visits: Mapped[int] = mapped_column(Integer, default=0)
+    detail_visits: Mapped[int] = mapped_column(Integer, default=0)
+    updated_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, server_default=func.now(), onupdate=utcnow
+    )
+
+    __table_args__ = (
+        UniqueConstraint("source", "day", name="uq_source_visit_counters_source_day"),
+    )
 
 
 class Board(Base):
@@ -211,12 +263,48 @@ class Board(Base):
     )
 
 
+class SourceAuthorization(Base):
+    __tablename__ = "source_authorizations"
+
+    id: Mapped[int] = mapped_column(bigint_pk(), primary_key=True, autoincrement=True)
+    source: Mapped[str] = mapped_column(String(50))
+    source_board_id: Mapped[int | None] = mapped_column(
+        bigint_pk(), ForeignKey("boards.id", ondelete="RESTRICT")
+    )
+    evidence_ref: Mapped[str] = mapped_column(Text)
+    approved: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    commercial_display: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=text("false")
+    )
+    valid_from: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True))
+    valid_until: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, server_default=func.now()
+    )
+    updated_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, server_default=func.now()
+    )
+
+    __table_args__ = (
+        Index("ix_source_authorizations_scope", "source", "source_board_id"),
+        CheckConstraint("length(trim(source)) > 0", name="ck_source_authorizations_source"),
+        CheckConstraint("length(trim(evidence_ref)) > 0", name="ck_source_authorizations_evidence"),
+        CheckConstraint(
+            "valid_until IS NULL OR valid_until > valid_from",
+            name="ck_source_authorizations_validity",
+        ),
+    )
+
+
 class SavedSearch(Base):
     """A stored filter set that can be re-run to surface newly seen jobs."""
 
     __tablename__ = "saved_searches"
 
     id: Mapped[int] = mapped_column(bigint_pk(), primary_key=True, autoincrement=True)
+    owner_user_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
+    )
     name: Mapped[str] = mapped_column(String(200))
     keywords: Mapped[str | None] = mapped_column(String(300))
     country: Mapped[str | None] = mapped_column(String(2))

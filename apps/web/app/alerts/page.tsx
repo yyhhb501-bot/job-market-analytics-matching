@@ -3,11 +3,10 @@ import Link from "next/link";
 import { JobCard } from "@/components/JobCard";
 import { SavedSearchActions } from "@/components/SavedSearchActions";
 import {
-  getSavedSearchMatches,
-  listSavedSearches,
   type Job,
   type SavedSearch,
 } from "@/lib/api";
+import { getSavedSearchMatches, listSavedSearches } from "@/lib/member-api";
 import { formatDate, labelEmployment, labelRemote } from "@/lib/format";
 
 export const dynamic = "force-dynamic";

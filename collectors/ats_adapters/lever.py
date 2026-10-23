@@ -10,7 +10,12 @@ import logging
 from collections.abc import AsyncIterator
 
 from collectors.ats_adapters.config import load_board_tokens
-from collectors.base import BaseCollector, SearchParams
+from collectors.base import (
+    AccessBlockedError,
+    BaseCollector,
+    RateLimitedError,
+    SearchParams,
+)
 from collectors.utils import (
     infer_country,
     parse_datetime,
@@ -36,11 +41,19 @@ class LeverCollector(BaseCollector):
             return
         async with self._client() as client:
             for company in companies:
+                if not await self._pre_request():
+                    return
                 try:
-                    response = await client.get(self.BASE_URL.format(company=company), params={"mode": "json"})
-                    response.raise_for_status()
-                    payload = response.json()
+                    payload = await self._board_json(
+                        client,
+                        self.BASE_URL.format(company=company),
+                        board=company,
+                        params={"mode": "json"},
+                    )
+                except (RateLimitedError, AccessBlockedError):
+                    raise
                 except Exception as exc:  # noqa: BLE001
+                    self._note_board_failure(company, exc)
                     logger.warning("lever: board %s failed: %s", company, exc)
                     continue
                 for raw in payload if isinstance(payload, list) else []:

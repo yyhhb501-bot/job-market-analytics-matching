@@ -18,7 +18,7 @@ import sys
 from apps.api.alerts import notify_saved_searches, run_active_saved_searches
 from apps.api.config import get_settings
 from apps.api.database import create_all, get_session_factory
-from apps.worker.pipeline import RunStats, run_collector
+from apps.worker.pipeline import RetryableCollectorError, RunStats, run_collector
 from collectors.base import SearchParams
 from collectors.registry import KNOWN_COLLECTORS, build_collectors
 
@@ -70,7 +70,13 @@ async def _run(args: argparse.Namespace) -> list[RunStats]:
     per_source: list[RunStats] = []
     total = RunStats(source="total")
     for name, spec in specs:
-        stats = await run_collector(collector_map[name], params_from_dict(spec), session_factory)
+        try:
+            stats = await run_collector(collector_map[name], params_from_dict(spec), session_factory)
+        except RetryableCollectorError as exc:
+            # CLI mode has no Celery retry; record the classified failure and
+            # keep going so one bad source doesn't kill the batch.
+            stats = RunStats(source=name, outcome="retryable", error=str(exc))
+            logger.error("collector %s failed: %s", name, exc)
         per_source.append(stats)
         total.merge(stats)
     for stats in per_source:
@@ -244,7 +250,10 @@ def _cmd_seed_demo(args: argparse.Namespace) -> int:
     """Insert a handful of sample jobs so the UI can be previewed offline."""
     import datetime as dt
 
+    from sqlalchemy import select
+
     from apps.api.database import create_all
+    from apps.api.models import SourceAuthorization
     from apps.worker.pipeline import persist_job
     from packages.job_schema import NormalizedJob
 
@@ -262,6 +271,30 @@ def _cmd_seed_demo(args: argparse.Namespace) -> int:
     ]
     session = get_session_factory()()
     try:
+        # Public queries only surface sources with an active commercial-display
+        # authorization, so the preview needs grants for the demo sources.
+        demo_sources = sorted({row[0] for row in samples})
+        existing = set(
+            session.scalars(
+                select(SourceAuthorization.source).where(
+                    SourceAuthorization.source.in_(demo_sources)
+                )
+            )
+        )
+        now_iso = now
+        for source in demo_sources:
+            if source in existing:
+                continue
+            session.add(
+                SourceAuthorization(
+                    source=source,
+                    evidence_ref="demo-seed:not-a-real-contract",
+                    approved=True,
+                    commercial_display=True,
+                    valid_from=now_iso - dt.timedelta(days=1),
+                )
+            )
+        session.commit()
         for index, row in enumerate(samples):
             (
                 source, source_id, title, company, description, city, state,

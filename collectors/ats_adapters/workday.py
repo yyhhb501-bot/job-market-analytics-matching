@@ -14,7 +14,12 @@ import logging
 from collections.abc import AsyncIterator
 
 from collectors.ats_adapters.config import load_board_entries
-from collectors.base import BaseCollector, SearchParams
+from collectors.base import (
+    AccessBlockedError,
+    BaseCollector,
+    RateLimitedError,
+    SearchParams,
+)
 from collectors.utils import (
     infer_country,
     normalize_employment_type,
@@ -79,11 +84,18 @@ class WorkdayCollector(BaseCollector):
                         "offset": offset,
                         "searchText": params.keywords or "",
                     }
+                    if not await self._pre_request():
+                        return
                     try:
                         response = await client.post(f"{base}/jobs", json=body)
-                        response.raise_for_status()
+                        self._raise_for_status(response)
                         payload = response.json()
+                        self.board_outcomes[site] = True
+                        self.complete_boards.add(site)
+                    except (RateLimitedError, AccessBlockedError):
+                        raise
                     except Exception as exc:  # noqa: BLE001
+                        self._note_board_failure(site, exc)
                         logger.warning("workday: %s/%s failed: %s", tenant, site, exc)
                         break
 
@@ -97,6 +109,7 @@ class WorkdayCollector(BaseCollector):
                             yield job
                             collected += 1
                             if collected >= params.results_wanted:
+                                self._note_board_incomplete(site)
                                 break
                     offset += PAGE_SIZE
                     if offset >= int(payload.get("total") or 0):
@@ -106,10 +119,14 @@ class WorkdayCollector(BaseCollector):
     async def _fetch_detail(self, client, base: str, path: str | None) -> dict | None:
         if not path:
             return None
+        if not await self._note_detail():
+            return None
         try:
             response = await client.get(f"{base}{path}")
-            response.raise_for_status()
+            self._raise_for_status(response)
             return response.json()
+        except (RateLimitedError, AccessBlockedError):
+            raise
         except Exception as exc:  # noqa: BLE001
             logger.debug("workday: detail %s failed: %s", path, exc)
             return None

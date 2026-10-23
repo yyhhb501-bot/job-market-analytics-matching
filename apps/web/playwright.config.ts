@@ -13,7 +13,9 @@ export default defineConfig({
     baseURL: `http://127.0.0.1:${WEB_PORT}`,
     trace: "retain-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"],
+    ...(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {}),
+  } }],
   webServer: [
     {
       command: "node e2e/api-server.mjs",
@@ -29,7 +31,10 @@ export default defineConfig({
       env: {
         API_BASE_URL: `http://127.0.0.1:${API_PORT}`,
         NEXT_PUBLIC_API_BASE_URL: `http://127.0.0.1:${API_PORT}`,
-        API_KEY: "",
+        API_KEY: "e2e-api-key",
+        WEB_UI_USERNAME: "admin",
+        WEB_UI_PASSWORD: "e2e-operator-password",
+        SESSION_SECRET: "e2e-session-secret",
       },
     },
   ],

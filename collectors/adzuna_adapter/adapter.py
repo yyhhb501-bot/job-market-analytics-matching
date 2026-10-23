@@ -11,9 +11,16 @@ import asyncio
 import logging
 from collections.abc import AsyncIterator
 
-from collectors.base import BaseCollector, CollectorError, SearchParams
+from collectors.base import (
+    AccessBlockedError,
+    BaseCollector,
+    CollectorError,
+    RateLimitedError,
+    SearchParams,
+)
 from collectors.utils import parse_datetime, parse_salary_number, strip_html, trim
 from packages.job_schema import NormalizedJob, Source
+from packages.seek_policy import title_in_scope
 
 logger = logging.getLogger("jobagg.collectors.adzuna")
 
@@ -63,12 +70,16 @@ class AdzunaCollector(BaseCollector):
                         query["what"] = params.keywords
                     if params.location:
                         query["where"] = params.location
+                    if not await self._pre_request():
+                        return
                     try:
                         response = await client.get(
                             BASE_URL.format(country=country.lower(), page=page), params=query
                         )
-                        response.raise_for_status()
+                        self._raise_for_status(response)
                         payload = response.json()
+                    except (RateLimitedError, AccessBlockedError):
+                        raise
                     except Exception as exc:  # noqa: BLE001
                         logger.warning("adzuna: %s page %s failed: %s", country, page, exc)
                         break
@@ -78,7 +89,9 @@ class AdzunaCollector(BaseCollector):
                         break
                     for raw in results:
                         job = self._parse(country, raw)
-                        if job is not None:
+                        if job is not None and (
+                            not params.extra.get("nurse_only") or title_in_scope(job.title)
+                        ):
                             yield job
                             collected += 1
                             if collected >= params.results_wanted:

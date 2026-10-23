@@ -9,15 +9,23 @@ so they never leak into public search, market comparison or aggregate stats.
 
 from __future__ import annotations
 
+import datetime as dt
+
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from apps.api.metrics import record_import
-from apps.api.models import CollectorDevice, ImportBatch, JobImportProvenance, utcnow
+from apps.api.models import CollectorDevice, ImportBatch, Job, JobImportProvenance, utcnow
 from apps.api.schemas import ImportErrorItem, ImportJobsRequest
 from apps.worker.pipeline import persist_job_row_safe
 from packages.job_schema import CollectionMode, NormalizedJob, Visibility
+from packages.seek_policy import (
+    SEEK_DAILY_TARGET,
+    SEEK_HOURLY_LIMIT,
+    SEEK_SOURCE_NAMES,
+    validate_seek_job,
+)
 
 MAX_ERRORS = 50
 
@@ -43,6 +51,41 @@ def _to_normalized(item, default_source: str) -> NormalizedJob:
         posted_at=item.posted_at,
         raw_payload=item.raw_payload,
     )
+
+
+def _utc_bounds(now: dt.datetime | None = None) -> tuple[dt.datetime, dt.datetime]:
+    now = now or utcnow()
+    now = now.astimezone(dt.UTC)
+    beijing = now.astimezone(dt.timezone(dt.timedelta(hours=8)))
+    day = beijing.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(dt.UTC)
+    hour = now.replace(minute=0, second=0, microsecond=0)
+    return day, hour
+
+
+def _seek_quota_counts(db: Session, device_id: int, now: dt.datetime | None = None) -> tuple[int, int]:
+    """Count unique, non-duplicate SEEK imports for today and this hour."""
+    from sqlalchemy import func
+
+    day, hour = _utc_bounds(now)
+    base = (
+        JobImportProvenance.device_id == device_id,
+        ImportBatch.source.in_(SEEK_SOURCE_NAMES),
+        JobImportProvenance.collection_mode == CollectionMode.USER_LOCAL.value,
+        JobImportProvenance.action == "inserted",
+        JobImportProvenance.created_at >= day,
+    )
+    today = int(db.scalar(select(func.count(func.distinct(JobImportProvenance.job_id)))
+        .select_from(JobImportProvenance).join(ImportBatch,ImportBatch.id==JobImportProvenance.batch_id).where(*base)) or 0)
+    hour_count = int(
+        db.scalar(
+            select(func.count(func.distinct(JobImportProvenance.job_id)))
+            .select_from(JobImportProvenance)
+            .join(ImportBatch,ImportBatch.id==JobImportProvenance.batch_id)
+            .where(*base[:-1], JobImportProvenance.created_at >= hour)
+        )
+        or 0
+    )
+    return today, hour_count
 
 
 def import_jobs(
@@ -101,10 +144,45 @@ def import_jobs(
     rejected = 0
     errors: list[ImportErrorItem] = []
     seen_job_ids: set[int] = set()
+    seek_today, seek_hour = _seek_quota_counts(db, device.id)
 
     for index, item in enumerate(payload.jobs):
         try:
             normalized = _to_normalized(item, payload.source)
+            prior_row = db.scalar(select(Job).where(Job.source == normalized.source,
+                Job.source_job_id == normalized.source_job_id, Job.owner_device_id == device.id))
+            confirmed_closed = prior_row is not None and prior_row.inactive_reason == 'source_confirmed_closed'
+            prior_closed_at = prior_row.closed_at if confirmed_closed else None
+            prior_lifecycle = (prior_row.raw_payload or {}).get('lifecycle') if prior_row else None
+            if normalized.source in SEEK_SOURCE_NAMES:
+                valid, _score, reasons, metadata = validate_seek_job(normalized)
+                if not valid:
+                    raise ValueError("SEEK validation failed: " + ", ".join(reasons))
+
+                raw_payload = dict(normalized.raw_payload or {})
+                raw_payload.update(metadata)
+                normalized.raw_payload = raw_payload
+
+                # An existing exact ID is an update and never consumes a new
+                # posting allowance. Cross-post duplicates are also harmless:
+                # they are classified after persistence and only inserted
+                # rows advance the counters below.
+                existing = db.scalar(
+                    select(Job).where(
+                        Job.source == normalized.source,
+                        Job.source_job_id == normalized.source_job_id,
+                        Job.owner_device_id == device.id,
+                    )
+                )
+                if existing is None and (
+                    seek_today >= SEEK_DAILY_TARGET or seek_hour >= SEEK_HOURLY_LIMIT
+                ):
+                    reason = (
+                        "daily_target_reached"
+                        if seek_today >= SEEK_DAILY_TARGET
+                        else "hourly_limit_reached"
+                    )
+                    raise ValueError("SEEK quota reached: " + reason)
             action, row = persist_job_row_safe(
                 db,
                 normalized,
@@ -112,6 +190,14 @@ def import_jobs(
                 collection_mode=CollectionMode.USER_LOCAL.value,
                 owner_device_id=device.id,
             )
+            if prior_lifecycle and row.owner_device_id == device.id:
+                row.raw_payload = {**(row.raw_payload or {}), 'lifecycle': prior_lifecycle}
+            if confirmed_closed:
+                # Replayed exports must not reopen a confirmed closed listing.
+                # A fresh active observation from the original page reopens it.
+                row.is_active = False
+                row.closed_at = prior_closed_at
+                row.inactive_reason = 'source_confirmed_closed'
         except Exception as exc:  # noqa: BLE001 - one bad item must not fail the batch
             rejected += 1
             if len(errors) < MAX_ERRORS:
@@ -122,6 +208,9 @@ def import_jobs(
 
         if action == "inserted":
             accepted += 1
+            if normalized.source in SEEK_SOURCE_NAMES:
+                seek_today += 1
+                seek_hour += 1
         else:
             duplicate += 1
 

@@ -1,14 +1,14 @@
 """Deterministic, dependency-free job enrichment.
 
-Provides skill extraction, extractive summaries and a résumé match score. The
-functions are pure and offline; an LLM provider can later be plugged behind the
-same interface (see ``Settings.enrichment_enabled``).
+Provides skill extraction, extractive summaries, occupation classification,
+and a résumé match score ranked by keyword coverage, title weight, and recency.
 """
 
 from __future__ import annotations
 
 import re
 from collections import Counter
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from packages.enrichment.occupations import classify_occupation, classify_seniority
@@ -147,8 +147,28 @@ def summarize(description: str | None, max_sentences: int = 3) -> str | None:
     return " ".join(ordered) or None
 
 
+def _compute_recency_score(job: Any) -> float:
+    """Freshness score (0-100) based on posting age."""
+    posted = getattr(job, "posted_at", None) or getattr(job, "first_seen_at", None)
+    if not posted:
+        return 50.0
+    if posted.tzinfo is None:
+        posted = posted.replace(tzinfo=UTC)
+    now = datetime.now(UTC)
+    age = now - posted
+    if age <= timedelta(days=2):
+        return 100.0
+    if age <= timedelta(days=7):
+        return 85.0
+    if age <= timedelta(days=14):
+        return 70.0
+    if age <= timedelta(days=30):
+        return 50.0
+    return 30.0
+
+
 def match_resume(job: Any, resume_text: str) -> dict:
-    """Score a job against a résumé (0-100) using skill + keyword overlap."""
+    """Score a job against a résumé (0-100) ranked by keyword coverage, title weight, and recency."""
     job_text = " ".join(
         str(part)
         for part in (
@@ -167,15 +187,37 @@ def match_resume(job: Any, resume_text: str) -> dict:
     resume_tokens = set(_tokens(resume_text))
     shared_keywords = sorted(job_tokens & resume_tokens)
 
-    skill_score = len(matched_skills) / len(job_skills) if job_skills else 0.0
-    keyword_score = len(shared_keywords) / len(job_tokens) if job_tokens else 0.0
-    score = round(100 * (0.65 * skill_score + 0.35 * keyword_score))
+    # 1. Keyword coverage: skills match + general keywords
+    skill_coverage = len(matched_skills) / len(job_skills) if job_skills else (1.0 if not resume_skills else 0.0)
+    kw_coverage = len(shared_keywords) / len(job_tokens) if job_tokens else 0.0
+    keyword_coverage_score = round(100 * (0.65 * skill_coverage + 0.35 * kw_coverage), 1)
+
+    # 2. Title weight: how strongly job title matches candidate skills & terms
+    title = getattr(job, "title", "")
+    title_tokens = set(_tokens(title))
+    title_weight_score = (
+        round(100 * (len(title_tokens & resume_tokens) / len(title_tokens)), 1)
+        if title_tokens
+        else 0.0
+    )
+
+    # 3. Recency score
+    recency_score = _compute_recency_score(job)
+
+    # Ranked combined score
+    ranked_score = round(
+        0.55 * keyword_coverage_score + 0.25 * title_weight_score + 0.20 * recency_score
+    )
+    score = min(max(ranked_score, 0), 100)
 
     return {
-        "score": min(score, 100),
+        "score": score,
         "matched_skills": matched_skills,
         "missing_skills": missing_skills[:10],
         "shared_keywords": shared_keywords[:15],
+        "keyword_coverage_score": keyword_coverage_score,
+        "title_weight_score": title_weight_score,
+        "recency_score": recency_score,
     }
 
 

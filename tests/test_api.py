@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from sqlalchemy import select
+
+from apps.api.models import Job, SourceAuthorization, utcnow
 from apps.worker.pipeline import persist_job
 from packages.job_schema import NormalizedJob
 
@@ -30,6 +33,16 @@ def seed(session) -> None:
             state="NSW",
             country="AU",
         ),
+    )
+    session.add_all(
+        SourceAuthorization(
+            source=source,
+            evidence_ref=f"test-license:api:{source}",
+            approved=True,
+            commercial_display=True,
+            valid_from=utcnow(),
+        )
+        for source in ("indeed", "seek")
     )
     session.commit()
 
@@ -84,15 +97,21 @@ def test_opensearch_backend_is_used_when_configured(client, session, monkeypatch
     seed(session)
     from packages.search import SearchHits
 
+    ids = list(session.scalars(select(Job.id).order_by(Job.id.desc())).all())
+    calls = []
+
     class FakeBackend:
         def search(self, **kwargs):
-            return SearchHits(ids=[], total=0)
+            calls.append(kwargs)
+            return SearchHits(ids=ids, total=len(ids))
 
     monkeypatch.setattr(
         "apps.api.routers.jobs.build_search_backend", lambda settings: FakeBackend()
     )
-    body = client.get("/api/v1/jobs").json()
-    assert body["total"] == 0
+    body = client.get("/api/v1/jobs", params={"sort": "id", "order": "asc"}).json()
+    assert len(calls) == 1
+    assert body["total"] == 2
+    assert [item["id"] for item in body["items"]] == ids
 
 
 def test_opensearch_failure_falls_back_to_postgres(client, session, monkeypatch):

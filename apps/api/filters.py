@@ -12,6 +12,7 @@ from datetime import datetime
 from sqlalchemy import func, or_, text
 
 from apps.api.models import Job
+from apps.api.source_authorization import public_job_condition
 
 # Kept in sync with the generated column created by migration 0003 and
 # ``database.ensure_full_text_index``.
@@ -92,7 +93,7 @@ def build_conditions(
     if first_seen_after is not None:
         conditions.append(Job.first_seen_at > first_seen_after)
     # Public surfaces never expose device-private imports.
-    conditions.append(Job.visibility == "public")
+    conditions.append(public_job_condition())
     return conditions
 
 

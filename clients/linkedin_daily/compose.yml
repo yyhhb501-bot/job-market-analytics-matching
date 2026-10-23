@@ -1,0 +1,35 @@
+services:
+  browser:
+    image: selenium/standalone-chromium:4.29.0-20250222
+    shm_size: 2gb
+    restart: unless-stopped
+    environment:
+      SE_NODE_SESSION_TIMEOUT: 86400
+      SE_VNC_NO_PASSWORD: "true"
+    ports:
+      - "127.0.0.1:7900:7900"
+    volumes:
+      - browser-profile:/home/seluser/linkedin-profile
+    healthcheck:
+      test: ["CMD", "/opt/bin/check-grid.sh", "--host", "0.0.0.0", "--port", "4444"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+  collector:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      browser:
+        condition: service_healthy
+    environment:
+      SELENIUM_URL: http://browser:4444
+    volumes:
+      - ../../data/linkedin-daily:/data
+      - ./config.json:/app/config.json:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  browser-profile:

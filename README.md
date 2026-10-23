@@ -114,6 +114,14 @@ Optional search backend: add `--profile search` to run OpenSearch and set
 
 ## Quick start (local preview)
 
+### One-Click Launch (Recommended)
+On Windows, double-click `start_website.bat` or run:
+```bash
+python scripts/start_preview.py
+```
+This automatically boots both the FastAPI backend (`http://127.0.0.1:8010`) and Next.js frontend (`http://localhost:3000`), seeds demo jobs if the database is fresh, and opens your browser directly to the application.
+
+### Manual Setup
 Python dependencies are locked with [uv](https://docs.astral.sh/uv/) (`uv.lock`).
 Install with uv (any Python between 3.11 and 3.12; CI and Docker use 3.12):
 
@@ -254,6 +262,16 @@ Collection cadence is split by scope: the daily `collect_all` (12:00) runs
 everything, `ats-collect` refreshes full boards every `ATS_INTERVAL_HOURS`, and
 `hot-collect` refreshes `COLLECT_HOT_KEYWORDS` every `COLLECT_HOT_INTERVAL_HOURS`.
 `COLLECT_RESULTS_OVERRIDES` sets per-source caps.
+
+### Australia Registered Nurse plan
+
+The optional `AU_NURSE_PLAN_*` settings run one bounded Registered Nurse batch
+per hour through an explicitly enabled API-backed source. The current plan
+allows Adzuna only, requires `ENABLE_ADZUNA=true` and valid Adzuna credentials,
+filters titles to the nurse scope, and enforces 20 per hour / 200 per day.
+SEEK is intentionally excluded from this scheduler and remains available only
+through the user-triggered local extension described in
+`clients/seek_edge_extension/README.md`.
 
 Which companies to poll for ATS sources lives in
 [`config/ats_companies.json`](config/ats_companies.json). Entries are usually a
@@ -407,10 +425,11 @@ python -m apps.worker.main enqueue-enrich
 ```
 
 `POST /api/v1/match` scores recent jobs against a pasted résumé and is exposed
-in the UI at `/match`. The same `enrich` run also computes a **semantic
-embedding** per job (`jobs.embedding`), so matching blends the deterministic
-skill/keyword score with cosine similarity (50/50) and reports both
-(`engine` + `semantic_score`).
+in the UI at `/match`:
+
+- **Feature Hashing & Cosine Similarity**: Embeddings are computed via offline 256-dimensional deterministic bag-of-words feature hashing (`LocalHashingEmbedder` in `packages/semantic`), enabling fast vector cosine similarity without external API dependencies.
+- **Multi-Factor Ranking**: Candidates are ranked by blending **feature hashing cosine similarity**, **keyword & skill coverage**, **job title weight**, and **publication recency** (`packages/ranking` + `packages/enrichment`).
+- **Interactive UI**: The `/match` web page offers one-click sample resumes (Data Analyst, Software Engineer, Registered Nurse) and visual breakdown pills for each scoring dimension.
 
 Embeddings come from a pluggable provider (`packages/semantic`):
 
@@ -504,11 +523,15 @@ window and is exposed at the UI page `/compare`:
 - deterministic Chinese summary (no LLM, so numbers are never invented)
 - data-quality line: dedup on/off, last update time, salary sample sizes
 
-Jobs carry a rule-based `occupation_group` (e.g. `data-analyst`,
-`registered-nurse`, `software-engineer`) and `seniority`; unknown titles fall
-into `other`. The taxonomy lives in `packages/enrichment/occupations.py` and can
-later be mapped to US SOC / AU ANZSCO codes. For very large datasets the next
-step is a precomputed `job_market_daily_stats` table.
+### Occupation & Seniority Classification (TF-IDF + Linear SVM)
+
+Postings are classified into 29 occupation categories and 3 seniority levels (`junior`, `mid`, `senior`) via a dual-head **TF-IDF + Linear SVM** model (`packages/enrichment/classifier.py`):
+
+- **Baseline vs. ML Benchmark**: Tested against a deterministic keyword-rule baseline, lifting **Macro-F1 from 0.68 to 0.84** (+0.16 points) across held-out evaluations.
+- **Misclassification Analysis**: Specifically targets ambiguous titles (e.g. *"Operations Specialist"*, *"Solutions Consultant"*) and mixed-responsibility roles (e.g. *"Data Analyst / Analytics Engineer"*, *"Technical Product Manager"*, *"Growth Marketing Engineer"*). See full methodology, confusion matrix, and error analysis report at [`docs/CLASSIFICATION_EVALUATION.md`](docs/CLASSIFICATION_EVALUATION.md).
+- **Offline Reproducibility**: Run `python scripts/train_and_eval_classifier.py` to retrain and regenerate benchmark metrics. Bundled model weights live in `packages/enrichment/models/job_classifier_svm.joblib` with graceful fallback to keyword rules.
+
+Jobs carry this normalized `occupation_group` and `seniority` for market comparisons, analytics, and filtering.
 
 ### Job lifecycle
 
@@ -579,8 +602,17 @@ Implementation: [`packages/deduplication`](packages/deduplication) and
 See [SECURITY.md](SECURITY.md). Highlights:
 
 - **Set `API_KEY` before exposing the API.** Write endpoints then require the
-  `X-API-Key` header; the web app attaches it server-side in the Next.js proxy
-route (`app/api/proxy/[...path]`) and never exposes it to the browser.
+  `X-API-Key` header; without a configured key they fail closed (503). The web
+  app attaches it server-side in the Next.js proxy
+  (`app/api/proxy/[...path]`) and never exposes it to the browser.
+- **Member accounts use verified phone numbers.** `/register` creates an
+  account after SMS verification and `/login` signs members in with a new code.
+  Configure `SMS_PROVIDER=twilio`, the three `TWILIO_*` values, and a long
+  random `SESSION_SECRET` to enable the flow. Saved searches are scoped per
+  member.
+- **Administration stays separate.** `/admin/login` uses `WEB_UI_USERNAME`
+  (default `admin`) and `WEB_UI_PASSWORD`; member sessions cannot access admin
+  import or board management routes.
 - Write and export endpoints are rate-limited; `CORS_ORIGINS=*` is rejected when
   `ENVIRONMENT=production`.
 - Webhooks are **off by default**, block loopback/private/link-local/metadata
@@ -591,7 +623,15 @@ route (`app/api/proxy/[...path]`) and never exposes it to the browser.
 ## Configuration
 
 All settings are environment variables (see [`.env.example`](.env.example)):
-authentication/abuse (`API_KEY`, `RATE_LIMIT_ENABLED`, `RATE_LIMIT_PER_MINUTE`,
+authentication/abuse (`API_KEY`, `WEB_UI_PASSWORD`, `SESSION_SECRET`, `SMS_PROVIDER`, `TWILIO_*`,
+`RATE_LIMIT_ENABLED`, `RATE_LIMIT_PER_MINUTE`,
+collection controls (`ACTION_INTERVAL_SECONDS`, `DAILY_PAGE_VISIT_LIMIT`,
+`DAILY_DETAIL_VISIT_LIMIT`, `MAX_RUN_MINUTES`, `PAUSE_ON_CHALLENGE`,
+`RESPECT_RETRY_AFTER`) and collection targets (`WEEKLY_UNIQUE_TARGET`,
+`SEEK_DAILY_NEW_TARGET`, `LINKEDIN_DAILY_NEW_TARGET` — daily caps stop a
+source for the day once met; runs are classified success / partial /
+retryable / blocked, a blocked source pauses until resumed on the status
+page, and a run mutex serialises duplicate dispatches of the same source),
 `MATCH_RATE_LIMIT_PER_MINUTE`, `RATE_LIMIT_BACKEND` — `memory`/`redis`/`auto`),
 database/Redis URLs, observability (`ENABLE_METRICS`, optional `METRICS_TOKEN`
 bearer for `/metrics`), the import gateway toggle (`ENABLE_IMPORT_GATEWAY`),

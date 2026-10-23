@@ -1,8 +1,8 @@
-"""Rule-based occupation grouping and seniority detection.
+"""Rule-based and ML-based occupation grouping and seniority detection.
 
-A first-pass taxonomy so the compare feature has a consistent cross-country
-unit of analysis (instead of raw ``title ILIKE``). It can later be mapped to
-US SOC / AU ANZSCO codes without changing callers.
+Supports:
+1. Keyword-rule baseline (`classify_occupation_baseline`, `classify_seniority_baseline`)
+2. Machine-learning classifier (TF-IDF + Linear SVM) with keyword baseline fallback.
 """
 
 from __future__ import annotations
@@ -76,8 +76,8 @@ def _normalise(text: str | None) -> str:
     return (text or "").lower().replace("_", " ").replace("-", " ")
 
 
-def classify_occupation(*values: str | None) -> str | None:
-    """Return the best-matching occupation group across title (first) and text."""
+def classify_occupation_baseline(*values: str | None) -> str | None:
+    """Return the best-matching occupation group using pure keyword rules."""
     for value in values:
         haystack = _normalise(value)
         if not haystack:
@@ -88,7 +88,8 @@ def classify_occupation(*values: str | None) -> str | None:
     return None
 
 
-def classify_seniority(title: str | None) -> str | None:
+def classify_seniority_baseline(title: str | None) -> str | None:
+    """Return the seniority level using keyword rules."""
     text = _normalise(title)
     if not text:
         return None
@@ -99,8 +100,65 @@ def classify_seniority(title: str | None) -> str | None:
     return "mid"
 
 
+def classify_occupation(*values: str | None, use_ml: bool = True) -> str | None:
+    """Return the best-matching occupation group across title (first) and text.
+
+    Uses TF-IDF + Linear SVM when available; falls back to the keyword baseline.
+    """
+    if not any(values):
+        return None
+
+    baseline_match = classify_occupation_baseline(*values)
+
+    if not use_ml:
+        return baseline_match
+
+    # If title is unknown or ambiguous to the keyword rules, try ML classifier
+    try:
+        from packages.enrichment.classifier import get_classifier
+        clf = get_classifier()
+        if clf.is_trained:
+            title = values[0] if values else None
+            desc = values[1] if len(values) > 1 else None
+            pred_occ, conf = clf.predict_occupation(title, desc)
+            if pred_occ and conf >= 0.2:
+                # If baseline matched a high confidence title, keep it unless ambiguous
+                if baseline_match:
+                    return baseline_match
+                return pred_occ
+    except Exception:
+        pass
+
+    return baseline_match
+
+
+def classify_seniority(title: str | None, use_ml: bool = True) -> str | None:
+    """Return seniority level ('junior', 'mid', 'senior')."""
+    if not title:
+        return None
+
+    baseline_match = classify_seniority_baseline(title)
+
+    if not use_ml:
+        return baseline_match
+
+    try:
+        from packages.enrichment.classifier import get_classifier
+        clf = get_classifier()
+        if clf.is_trained:
+            pred_sen, conf = clf.predict_seniority(title)
+            if pred_sen and conf >= 0.3:
+                return pred_sen
+    except Exception:
+        pass
+
+    return baseline_match
+
+
 __all__ = [
     "OCCUPATION_GROUPS",
     "classify_occupation",
+    "classify_occupation_baseline",
     "classify_seniority",
+    "classify_seniority_baseline",
 ]

@@ -4,7 +4,7 @@ import argparse
 
 from apps.api.alerts import run_active_saved_searches
 from apps.api.config import Settings
-from apps.api.models import SavedSearch
+from apps.api.models import SavedSearch, SourceAuthorization, utcnow
 from apps.worker import main as worker_main
 from apps.worker.pipeline import persist_job
 from packages.job_schema import NormalizedJob
@@ -34,6 +34,16 @@ def seed(session) -> None:
             city="Sydney",
             country="AU",
         ),
+    )
+    session.add_all(
+        SourceAuthorization(
+            source=source,
+            evidence_ref=f"test-license:saved-searches:{source}",
+            approved=True,
+            commercial_display=True,
+            valid_from=utcnow(),
+        )
+        for source in ("indeed", "seek")
     )
     session.commit()
 

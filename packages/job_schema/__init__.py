@@ -113,6 +113,10 @@ class NormalizedJob(BaseModel):
     source: str
     source_job_id: str
     title: str
+    # ATS board token / sub-source the job came from (greenhouse board slug,
+    # lever company, ...). The pipeline resolves it to a boards.id for
+    # per-board lifecycle attribution.
+    board_token: str | None = None
     canonical_url: str | None = None
     company: str | None = None
     description: str | None = None

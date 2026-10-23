@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from apps.api.models import SourceAuthorization, utcnow
 from apps.worker.pipeline import persist_job
 from packages.job_schema import NormalizedJob
 
@@ -56,6 +57,16 @@ def seed(session) -> None:
             salary_currency="USD",
             salary_period="year",
         ),
+    )
+    session.add_all(
+        SourceAuthorization(
+            source=source,
+            evidence_ref=f"test-license:compare:{source}",
+            approved=True,
+            commercial_display=True,
+            valid_from=utcnow(),
+        )
+        for source in ("indeed", "seek")
     )
     session.commit()
 

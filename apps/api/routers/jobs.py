@@ -25,6 +25,7 @@ from apps.api.schemas import (
     SourceCount,
     StatsResponse,
 )
+from apps.api.source_authorization import public_job_condition
 from packages.fx import convert_job_salary
 from packages.job_schema import ATS_SOURCES, Source
 from packages.search import build_search_backend
@@ -49,10 +50,12 @@ def _apply(statement: Select, conditions: list) -> Select:
     return statement
 
 
-def _load_ordered(db: Session, ids: list[int]) -> list[Job]:
+def _load_ordered(db: Session, ids: list[int], conditions: list | None = None) -> list[Job]:
     if not ids:
         return []
-    rows = db.scalars(select(Job).where(Job.id.in_(ids))).all()
+    rows = db.scalars(
+        select(Job).where(Job.id.in_(ids), public_job_condition(), *(conditions or []))
+    ).all()
     by_id = {row.id: row for row in rows}
     return [by_id[job_id] for job_id in ids if job_id in by_id]
 
@@ -91,6 +94,25 @@ def search_jobs(
     if sort not in _ALLOWED_SORTS:
         raise HTTPException(status_code=422, detail=f"sort must be one of {sorted(_ALLOWED_SORTS)}")
 
+    dialect = db.get_bind().dialect.name
+    conditions = build_conditions(
+        q=q,
+        dialect_name=dialect,
+        sources=source,
+        countries=country,
+        states=state,
+        cities=city,
+        companies=company,
+        remote_types=remote_type,
+        employment_types=employment_type,
+        min_salary=min_salary,
+        posted_after=posted_after,
+    )
+    if not include_duplicates:
+        conditions.append(Job.duplicate_of.is_(None))
+    conditions.append(Job.is_active.is_(True))
+    total = db.scalar(_apply(select(func.count()).select_from(Job), conditions)) or 0
+
     backend = build_search_backend(get_settings())
     if backend is not None:
         try:
@@ -111,37 +133,19 @@ def search_jobs(
                 page=page,
                 page_size=page_size,
             )
-            rows = _load_ordered(db, hits.ids)
-            return JobSearchResponse(
-                items=_serialize(rows, currency),
-                total=hits.total,
-                page=page,
-                page_size=page_size,
-            )
+            rows = _load_ordered(db, hits.ids, conditions)
+            expected = min(page_size, max(0, total - (page - 1) * page_size))
+            if hits.total == total and len(rows) == len(hits.ids) == expected:
+                return JobSearchResponse(
+                    items=_serialize(rows, currency),
+                    total=total,
+                    page=page,
+                    page_size=page_size,
+                )
         except Exception as exc:  # noqa: BLE001 - always fall back to PostgreSQL
             logger.warning("opensearch search failed (%s); falling back to postgres", exc)
 
-    dialect = db.get_bind().dialect.name
-    conditions = build_conditions(
-        q=q,
-        dialect_name=dialect,
-        sources=source,
-        countries=country,
-        states=state,
-        cities=city,
-        companies=company,
-        remote_types=remote_type,
-        employment_types=employment_type,
-        min_salary=min_salary,
-        posted_after=posted_after,
-    )
-    if not include_duplicates:
-        conditions.append(Job.duplicate_of.is_(None))
-    conditions.append(Job.is_active.is_(True))
-
     base = _apply(select(Job), conditions)
-
-    total = db.scalar(_apply(select(func.count()).select_from(Job), conditions)) or 0
 
     if sort == "relevance" and q and dialect == "postgresql":
         ordered = base.order_by(relevance_order(q))
@@ -167,8 +171,8 @@ def list_fx_rates() -> dict:
 
 @router.get("/jobs/{job_id}", response_model=JobOut)
 def get_job(job_id: int, db: Session = Depends(get_db)) -> JobOut:
-    job = db.get(Job, job_id)
-    if job is None or job.visibility != "public":
+    job = db.scalar(select(Job).where(Job.id == job_id, public_job_condition()))
+    if job is None:
         raise HTTPException(status_code=404, detail="job not found")
     return JobOut.model_validate(job)
 
@@ -179,7 +183,7 @@ def list_sources(db: Session = Depends(get_db)) -> dict:
     counts = dict(
         db.execute(
             select(Job.source, func.count())
-            .where(Job.visibility == "public")
+            .where(public_job_condition())
             .group_by(Job.source)
         ).all()
     )
@@ -219,7 +223,7 @@ def list_sources(db: Session = Depends(get_db)) -> dict:
 
 @router.get("/stats", response_model=StatsResponse)
 def stats(db: Session = Depends(get_db)) -> StatsResponse:
-    public = Job.visibility == "public"
+    public = public_job_condition()
     total = db.scalar(select(func.count()).select_from(Job).where(public)) or 0
     active = (
         db.scalar(

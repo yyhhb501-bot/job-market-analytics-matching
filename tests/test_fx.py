@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from apps.api.models import SourceAuthorization, utcnow
 from apps.worker.pipeline import persist_job
 from packages.fx import convert, parse_rates
 from packages.job_schema import NormalizedJob
@@ -44,6 +45,15 @@ def test_fx_endpoint(client):
 
 def test_search_currency_conversion(client, session):
     persist_job(session, aud_job())
+    session.add(
+        SourceAuthorization(
+            source="seek",
+            evidence_ref="test-license:fx:seek",
+            approved=True,
+            commercial_display=True,
+            valid_from=utcnow(),
+        )
+    )
     session.commit()
 
     body = client.get("/api/v1/jobs", params={"currency": "USD"}).json()
@@ -55,6 +65,15 @@ def test_search_currency_conversion(client, session):
 
 def test_search_without_currency_has_no_display_fields(client, session):
     persist_job(session, aud_job())
+    session.add(
+        SourceAuthorization(
+            source="seek",
+            evidence_ref="test-license:fx:seek",
+            approved=True,
+            commercial_display=True,
+            valid_from=utcnow(),
+        )
+    )
     session.commit()
     item = client.get("/api/v1/jobs").json()["items"][0]
     assert item["salary_display_currency"] is None
