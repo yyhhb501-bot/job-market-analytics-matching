@@ -1,0 +1,220 @@
+{
+  "generated_at": "2026-10-25T17:05:24.282181+00:00",
+  "daily_target_per_source": 600,
+  "sources": [
+    {
+      "source": "ashby",
+      "internal_total": 2601,
+      "public_total": 0,
+      "today_new_bj": 0,
+      "seven_day_new_bj": 538,
+      "last_ingest_at": "2026-10-24T06:40:44.314788Z"
+    },
+    {
+      "source": "bamboohr",
+      "internal_total": 20,
+      "public_total": 0,
+      "today_new_bj": 0,
+      "seven_day_new_bj": 7,
+      "last_ingest_at": "2026-10-24T06:41:03.277233Z"
+    },
+    {
+      "source": "breezy",
+      "internal_total": 3,
+      "public_total": 0,
+      "today_new_bj": 0,
+      "seven_day_new_bj": 1,
+      "last_ingest_at": "2026-10-24T06:40:51.238586Z"
+    },
+    {
+      "source": "greenhouse",
+      "internal_total": 9213,
+      "public_total": 0,
+      "today_new_bj": 0,
+      "seven_day_new_bj": 2217,
+      "last_ingest_at": "2026-10-25T06:38:27.945848Z"
+    },
+    {
+      "source": "indeed",
+      "internal_total": 51108,
+      "public_total": 0,
+      "today_new_bj": 0,
+      "seven_day_new_bj": 8327,
+      "last_ingest_at": "2026-10-25T15:54:56.027095Z"
+    },
+    {
+      "source": "lever",
+      "internal_total": 58,
+      "public_total": 0,
+      "today_new_bj": 0,
+      "seven_day_new_bj": 10,
+      "last_ingest_at": "2026-10-24T06:40:06.787416Z"
+    },
+    {
+      "source": "linkedin_user_import",
+      "internal_total": 152,
+      "public_total": 0,
+      "today_new_bj": 0,
+      "seven_day_new_bj": 1,
+      "last_ingest_at": "2026-10-20T02:39:24.230345Z"
+    },
+    {
+      "source": "personio",
+      "internal_total": 1,
+      "public_total": 0,
+      "today_new_bj": 0,
+      "seven_day_new_bj": 0,
+      "last_ingest_at": "2026-09-13T08:50:46.264381Z"
+    },
+    {
+      "source": "pinpoint",
+      "internal_total": 72,
+      "public_total": 0,
+      "today_new_bj": 0,
+      "seven_day_new_bj": 13,
+      "last_ingest_at": "2026-10-24T06:41:19.767132Z"
+    },
+    {
+      "source": "rippling",
+      "internal_total": 12,
+      "public_total": 0,
+      "today_new_bj": 0,
+      "seven_day_new_bj": 0,
+      "last_ingest_at": "2026-09-15T21:37:54.633045Z"
+    },
+    {
+      "source": "seek_user_import",
+      "internal_total": 158,
+      "public_total": 0,
+      "today_new_bj": 0,
+      "seven_day_new_bj": 6,
+      "last_ingest_at": "2026-10-22T04:01:42.569120Z"
+    },
+    {
+      "source": "workday",
+      "internal_total": 40,
+      "public_total": 0,
+      "today_new_bj": 0,
+      "seven_day_new_bj": 0,
+      "last_ingest_at": "2026-09-13T08:50:44.967085Z"
+    }
+  ],
+  "uploads": [
+    {
+      "source": "linkedin_user_import",
+      "today_accepted_bj": 0,
+      "today_duplicate_bj": 0,
+      "today_rejected_bj": 0,
+      "last_batch_status": "completed",
+      "last_batch_accepted": 0,
+      "last_batch_duplicate": 1,
+      "last_batch_rejected": 0,
+      "last_batch_completed_at": "2026-10-20T02:43:34.154659Z",
+      "collector_state": "stale"
+    },
+    {
+      "source": "seek_user_import",
+      "today_accepted_bj": 0,
+      "today_duplicate_bj": 0,
+      "today_rejected_bj": 0,
+      "last_batch_status": "completed",
+      "last_batch_accepted": 1,
+      "last_batch_duplicate": 0,
+      "last_batch_rejected": 0,
+      "last_batch_completed_at": "2026-10-22T04:01:42.577079Z",
+      "collector_state": "none"
+    }
+  ],
+  "trend": [
+    {
+      "date": "2026-10-20",
+      "new_jobs": 1
+    },
+    {
+      "date": "2026-10-22",
+      "new_jobs": 6
+    },
+    {
+      "date": "2026-10-24",
+      "new_jobs": 2688
+    },
+    {
+      "date": "2026-10-25",
+      "new_jobs": 8425
+    }
+  ],
+  "methodology": {
+    "available": true,
+    "dataset_sha256": "672bac2668316d38fb6164f825f55a85e4d1a37afa5918b541833b7c8f67daf1",
+    "corpus_scope": "synthetic_only",
+    "human_ground_truth_present": false,
+    "train_count": 308,
+    "test_count": 129,
+    "seed": 42,
+    "strategies": [
+      {
+        "name": "keyword_baseline",
+        "occupation_macro_f1": 0.7525,
+        "seniority_macro_f1": 0.7551,
+        "overall_macro_f1": 0.7538
+      },
+      {
+        "name": "online_hybrid",
+        "occupation_macro_f1": 0.7525,
+        "seniority_macro_f1": 0.7465,
+        "overall_macro_f1": 0.7495
+      },
+      {
+        "name": "pure_svm",
+        "occupation_macro_f1": 0.6855,
+        "seniority_macro_f1": 0.4817,
+        "overall_macro_f1": 0.5836
+      }
+    ],
+    "generalisation_status": "真实泛化效果待验证：当前留出集无人工标注真值"
+  },
+  "examples": [
+    {
+      "title": "Data Analyst",
+      "country": "US",
+      "city": "Austin",
+      "description": "Python SQL pandas Tableau statistics dashboards A/B testing business analysis.",
+      "remote_type": "remote"
+    },
+    {
+      "title": "Data Engineer",
+      "country": "US",
+      "city": "Seattle",
+      "description": "Python SQL ETL Airflow dbt AWS data warehouse pipelines.",
+      "remote_type": "hybrid"
+    },
+    {
+      "title": "Software Engineer",
+      "country": "US",
+      "city": "Boston",
+      "description": "Python TypeScript React FastAPI Docker PostgreSQL backend development.",
+      "remote_type": "onsite"
+    },
+    {
+      "title": "Data Analyst",
+      "country": "AU",
+      "city": "Sydney",
+      "description": "SQL Python Tableau Power BI statistics reporting business analysis.",
+      "remote_type": "hybrid"
+    },
+    {
+      "title": "Registered Nurse",
+      "country": "AU",
+      "city": "Melbourne",
+      "description": "Registered Nurse AHPRA patient assessment acute care medication infection control.",
+      "remote_type": "onsite"
+    },
+    {
+      "title": "Registered Nurse - Critical Care",
+      "country": "AU",
+      "city": "Sydney",
+      "description": "Registered Nurse AHPRA ICU monitoring triage clinical documentation critical care.",
+      "remote_type": "onsite"
+    }
+  ]
+}
