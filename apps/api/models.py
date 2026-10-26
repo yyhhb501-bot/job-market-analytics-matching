@@ -124,6 +124,9 @@ class Job(Base):
     summary: Mapped[str | None] = mapped_column(Text)
     summary_source: Mapped[str | None] = mapped_column(String(20))
     embedding: Mapped[list | None] = mapped_column(json_type())
+    # identity of the embedder that produced `embedding` (e.g. "local", "openai");
+    # vectors from different embedders/models must never be compared
+    embedding_model: Mapped[str | None] = mapped_column(String(60))
     # occupation taxonomy used by the market-compare feature
     occupation_group: Mapped[str | None] = mapped_column(String(60), index=True)
     seniority: Mapped[str | None] = mapped_column(String(20))

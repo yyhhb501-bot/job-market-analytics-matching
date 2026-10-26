@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     rate_limit_enabled: bool = True
     rate_limit_per_minute: int = 60
     match_rate_limit_per_minute: int = 10
+    # Stricter limit for the anonymous /demo/match endpoint.
+    demo_match_rate_limit_per_minute: int = 5
 
     # Local-collector import gateway. Jobs uploaded by user devices are stored
     # private to that device and excluded from public search/stats.

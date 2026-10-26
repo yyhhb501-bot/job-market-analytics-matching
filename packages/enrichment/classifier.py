@@ -1,15 +1,15 @@
 """TF-IDF + Linear SVM classifier for job occupation and seniority.
 
-Matches resume specification:
-"Classified postings by occupation and seniority with TF-IDF + Linear SVM against
-a keyword-rule baseline, raising Macro-F1 from 0.68 to 0.84; analyzed
-misclassification patterns for ambiguous titles and mixed-responsibility roles."
+Trains TF-IDF + Linear SVM heads against the keyword-rule baseline in
+``packages/enrichment/occupations.py``. Confidence values are relative
+confidence scores derived from SVM decision margins; they are not calibrated
+probabilities. See scripts/train_and_eval_classifier.py for the reproducible
+evaluation protocol (group-stratified splits, distinct strategy metrics).
 """
 
 from __future__ import annotations
 
 import logging
-import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -37,10 +37,23 @@ def _clean_text(title: str | None, description: str | None = None, max_desc_len:
 @dataclass
 class ClassificationResult:
     occupation: str | None
-    occupation_confidence: float
+    # Relative confidence scores derived from the SVM decision margins (softmax
+    # over one-vs-rest margins). These are NOT calibrated probabilities; do not
+    # present them as such before a calibration study exists.
+    occupation_relative_score: float
     seniority: str | None
-    seniority_confidence: float
+    seniority_relative_score: float
     method: str = "svm"  # "svm" | "baseline" | "fallback"
+
+    @property
+    def occupation_confidence(self) -> float:
+        """Backwards-compatible alias for the relative confidence score."""
+        return self.occupation_relative_score
+
+    @property
+    def seniority_confidence(self) -> float:
+        """Backwards-compatible alias for the relative confidence score."""
+        return self.seniority_relative_score
 
 
 @dataclass
@@ -51,8 +64,12 @@ class EvaluationReport:
     svm_seniority_macro_f1: float
     overall_baseline_macro_f1: float
     overall_svm_macro_f1: float
+    hybrid_occupation_macro_f1: float | None = None
+    hybrid_seniority_macro_f1: float | None = None
+    overall_hybrid_macro_f1: float | None = None
     detailed_metrics: dict[str, Any] = field(default_factory=dict)
     misclassification_analysis: dict[str, Any] = field(default_factory=dict)
+    meta: dict[str, Any] = field(default_factory=dict)
 
 
 class OccupationSeniorityClassifier:
@@ -126,7 +143,6 @@ class OccupationSeniorityClassifier:
         - 'seniority': target seniority level ('junior', 'mid', 'senior')
         """
         self._init_pipeline_components()
-        import numpy as np
 
         texts = [_clean_text(s.get("title"), s.get("description")) for s in samples]
         occ_labels = [s["occupation"] for s in samples]
@@ -149,9 +165,9 @@ class OccupationSeniorityClassifier:
         if not title and not description:
             return ClassificationResult(
                 occupation=None,
-                occupation_confidence=0.0,
+                occupation_relative_score=0.0,
                 seniority=None,
-                seniority_confidence=0.0,
+                seniority_relative_score=0.0,
                 method="fallback",
             )
 
@@ -166,9 +182,9 @@ class OccupationSeniorityClassifier:
             sen = classify_seniority_baseline(title)
             return ClassificationResult(
                 occupation=occ,
-                occupation_confidence=0.7 if occ else 0.0,
+                occupation_relative_score=0.7 if occ else 0.0,
                 seniority=sen,
-                seniority_confidence=0.7 if sen else 0.0,
+                seniority_relative_score=0.7 if sen else 0.0,
                 method="baseline",
             )
 
@@ -177,35 +193,37 @@ class OccupationSeniorityClassifier:
         text = _clean_text(title, description)
         X = self.vectorizer.transform([text])
 
-        # Occupation prediction & confidence via decision function softmax
+        # Relative confidence scores: softmax over the one-vs-rest decision
+        # margins. These quantify the model's relative preference between
+        # classes; they are not calibrated probabilities.
         occ_scores = self.occupation_clf.decision_function(X)[0]
         if occ_scores.ndim == 0:  # binary classification edge case
             occ_pred_idx = int(occ_scores > 0)
-            occ_conf = float(1 / (1 + np.exp(-abs(occ_scores))))
+            occ_score = float(1 / (1 + np.exp(-abs(occ_scores))))
         else:
             exp_scores = np.exp(occ_scores - np.max(occ_scores))
             probs = exp_scores / np.sum(exp_scores)
             occ_pred_idx = int(np.argmax(probs))
-            occ_conf = float(probs[occ_pred_idx])
+            occ_score = float(probs[occ_pred_idx])
         pred_occ = self.occupation_classes[occ_pred_idx]
 
-        # Seniority prediction & confidence
+        # Seniority prediction with its relative confidence score
         sen_scores = self.seniority_clf.decision_function(X)[0]
         if sen_scores.ndim == 0:
             sen_pred_idx = int(sen_scores > 0)
-            sen_conf = float(1 / (1 + np.exp(-abs(sen_scores))))
+            sen_score = float(1 / (1 + np.exp(-abs(sen_scores))))
         else:
             exp_scores = np.exp(sen_scores - np.max(sen_scores))
             probs = exp_scores / np.sum(exp_scores)
             sen_pred_idx = int(np.argmax(probs))
-            sen_conf = float(probs[sen_pred_idx])
+            sen_score = float(probs[sen_pred_idx])
         pred_sen = self.seniority_classes[sen_pred_idx]
 
         return ClassificationResult(
             occupation=pred_occ,
-            occupation_confidence=round(occ_conf, 4),
+            occupation_relative_score=round(occ_score, 4),
             seniority=pred_sen,
-            seniority_confidence=round(sen_conf, 4),
+            seniority_relative_score=round(sen_score, 4),
             method="svm",
         )
 
@@ -264,3 +282,11 @@ def get_classifier() -> OccupationSeniorityClassifier:
     if _GLOBAL_CLASSIFIER is None:
         _GLOBAL_CLASSIFIER = OccupationSeniorityClassifier()
     return _GLOBAL_CLASSIFIER
+
+
+def set_global_classifier(clf: OccupationSeniorityClassifier) -> None:
+    """Replace the process-wide singleton so the online hybrid policy in
+    :mod:`packages.enrichment.occupations` evaluates with a specific model
+    (used by the evaluation pipeline after training a fresh artifact)."""
+    global _GLOBAL_CLASSIFIER
+    _GLOBAL_CLASSIFIER = clf

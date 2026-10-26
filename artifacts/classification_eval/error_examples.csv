@@ -1,0 +1,223 @@
+strategy,head,sample_id,title,true,pred
+keyword_baseline,occupation,syn:559730c8569d,Senior Security Engineer (Remote),cybersecurity,unknown
+keyword_baseline,occupation,amb:eebdfabea9d0,Assistant to Senior Director - Global Team,admin,unknown
+keyword_baseline,occupation,amb:3fd5111a8469,Data Analyst / Analytics Engineer,data-analyst,data-engineer
+keyword_baseline,occupation,syn:4b4fb34acbd0,Senior Security Engineer,cybersecurity,unknown
+keyword_baseline,occupation,amb:8d7c3340f96b,Unit Coordinator - Global Team,registered-nurse,unknown
+keyword_baseline,occupation,amb:bfaa895cafad,Associate - Global Team,legal,unknown
+keyword_baseline,occupation,amb:9e6df679b6b9,Operations Specialist (Hybrid),customer-service,unknown
+keyword_baseline,occupation,syn:174eb773826a,HR Assistant,hr,unknown
+keyword_baseline,occupation,amb:8eb06014c2f3,Associate,accountant,unknown
+keyword_baseline,occupation,amb:64e294e6f774,Associate - Global Team,accountant,unknown
+keyword_baseline,occupation,amb:811abba096af,Data Analyst / Analytics Engineer (Hybrid),data-analyst,data-engineer
+keyword_baseline,occupation,syn:8306b742a185,Senior Security Engineer - Full Time,cybersecurity,unknown
+keyword_baseline,occupation,syn:5b3704ba60a3,Interstate Linehaul Driver (Remote),truck-driver,unknown
+keyword_baseline,occupation,amb:34d5202b7b50,Associate (Hybrid),legal,unknown
+keyword_baseline,occupation,syn:47823a3fe31e,Interstate Linehaul Driver | Immediate Start,truck-driver,unknown
+keyword_baseline,occupation,syn:9a853f765cec,Interstate Linehaul Driver,truck-driver,unknown
+keyword_baseline,occupation,syn:53a85cf4516c,Senior Security Engineer | Immediate Start,cybersecurity,unknown
+keyword_baseline,occupation,amb:58b68ba328d4,Unit Coordinator,registered-nurse,unknown
+keyword_baseline,occupation,syn:89b921c86fc3,HR Assistant | Immediate Start,hr,unknown
+keyword_baseline,occupation,amb:bf41293d9615,Associate,legal,unknown
+keyword_baseline,occupation,amb:82978ba08a26,Operations Specialist,customer-service,unknown
+keyword_baseline,occupation,amb:865ce012cc60,Assistant to Senior Director,admin,unknown
+keyword_baseline,occupation,amb:3fa08c7503f2,Unit Coordinator (Hybrid),registered-nurse,unknown
+keyword_baseline,occupation,syn:e98661a1a933,Interstate Linehaul Driver - Full Time,truck-driver,unknown
+keyword_baseline,occupation,syn:863ff5e79915,HR Assistant (Remote),hr,unknown
+keyword_baseline,occupation,syn:370e811d6830,HR Assistant - Full Time,hr,unknown
+keyword_baseline,occupation,amb:8f7dfa8aafba,Assistant to Senior Director (Hybrid),admin,unknown
+keyword_baseline,occupation,amb:dbe66c2f11f1,Data Analyst / Analytics Engineer - Global Team,data-analyst,data-engineer
+keyword_baseline,occupation,amb:8db91807092a,Operations Specialist - Global Team,customer-service,unknown
+keyword_baseline,occupation,amb:87ba9e40c7e9,Associate (Hybrid),accountant,unknown
+keyword_baseline,seniority,amb:eebdfabea9d0,Assistant to Senior Director - Global Team,junior,senior
+keyword_baseline,seniority,syn:a38e465e3930,Agile Delivery Manager (Remote),mid,senior
+keyword_baseline,seniority,amb:8d7c3340f96b,Unit Coordinator - Global Team,senior,mid
+keyword_baseline,seniority,syn:365295eae5c0,Head Chef (Remote),senior,mid
+keyword_baseline,seniority,amb:bfaa895cafad,Associate - Global Team,junior,mid
+keyword_baseline,seniority,syn:65f84fcb9578,Site Construction Supervisor (Remote),senior,mid
+keyword_baseline,seniority,syn:4ab6bf21cbf2,Head Chef | Immediate Start,senior,mid
+keyword_baseline,seniority,syn:beca23db07db,Agile Delivery Manager | Immediate Start,mid,senior
+keyword_baseline,seniority,amb:8eb06014c2f3,Associate,junior,mid
+keyword_baseline,seniority,amb:64e294e6f774,Associate - Global Team,junior,mid
+keyword_baseline,seniority,syn:2909eed97456,Site Construction Supervisor - Full Time,senior,mid
+keyword_baseline,seniority,syn:5b3704ba60a3,Interstate Linehaul Driver (Remote),senior,mid
+keyword_baseline,seniority,syn:40c16274ff02,Site Construction Supervisor,senior,mid
+keyword_baseline,seniority,syn:84ee60c28a36,University Lecturer in Statistics,senior,mid
+keyword_baseline,seniority,amb:34d5202b7b50,Associate (Hybrid),junior,mid
+keyword_baseline,seniority,syn:47823a3fe31e,Interstate Linehaul Driver | Immediate Start,senior,mid
+keyword_baseline,seniority,syn:e05eb7446064,Agile Delivery Manager,mid,senior
+keyword_baseline,seniority,syn:9a853f765cec,Interstate Linehaul Driver,senior,mid
+keyword_baseline,seniority,syn:4bb34045b196,Agile Delivery Manager - Full Time,mid,senior
+keyword_baseline,seniority,syn:a6b848b14b0d,Head Chef - Full Time,senior,mid
+keyword_baseline,seniority,amb:58b68ba328d4,Unit Coordinator,senior,mid
+keyword_baseline,seniority,amb:bf41293d9615,Associate,junior,mid
+keyword_baseline,seniority,syn:67923ea347c9,University Lecturer in Statistics - Full Time,senior,mid
+keyword_baseline,seniority,syn:ac0b82379e5e,University Lecturer in Statistics (Remote),senior,mid
+keyword_baseline,seniority,amb:865ce012cc60,Assistant to Senior Director,junior,senior
+keyword_baseline,seniority,amb:3fa08c7503f2,Unit Coordinator (Hybrid),senior,mid
+keyword_baseline,seniority,syn:e98661a1a933,Interstate Linehaul Driver - Full Time,senior,mid
+keyword_baseline,seniority,syn:4f0af86d53b3,Site Construction Supervisor | Immediate Start,senior,mid
+keyword_baseline,seniority,amb:8f7dfa8aafba,Assistant to Senior Director (Hybrid),junior,senior
+keyword_baseline,seniority,amb:87ba9e40c7e9,Associate (Hybrid),junior,mid
+keyword_baseline,seniority,syn:bb95557f8944,Head Chef,senior,mid
+keyword_baseline,seniority,syn:b60ef3dd8121,University Lecturer in Statistics | Immediate Start,senior,mid
+pure_svm,occupation,syn:e3a96cfd9f69,Junior DevOps Engineer,devops-sre,software-engineer
+pure_svm,occupation,syn:559730c8569d,Senior Security Engineer (Remote),cybersecurity,devops-sre
+pure_svm,occupation,syn:b0666f3056be,Junior Administrative Assistant (Remote),admin,legal
+pure_svm,occupation,syn:59b1bea7a2e4,Junior DevOps Engineer (Remote),devops-sre,software-engineer
+pure_svm,occupation,syn:4b4fb34acbd0,Senior Security Engineer,cybersecurity,software-engineer
+pure_svm,occupation,syn:395009c67fd6,Disability Support Assistant | Immediate Start,aged-care,customer-service
+pure_svm,occupation,syn:0e2d14e4c00e,Junior Administrative Assistant,admin,legal
+pure_svm,occupation,syn:65f84fcb9578,Site Construction Supervisor (Remote),construction,security-officer
+pure_svm,occupation,syn:36cdd2867611,Senior Data Engineer (Remote),data-engineer,data-analyst
+pure_svm,occupation,syn:f03a8b9b96ac,Graduate Radiographer,healthcare-allied,aged-care
+pure_svm,occupation,syn:8306b742a185,Senior Security Engineer - Full Time,cybersecurity,devops-sre
+pure_svm,occupation,syn:2909eed97456,Site Construction Supervisor - Full Time,construction,security-officer
+pure_svm,occupation,syn:36626c9b171e,Junior DevOps Engineer | Immediate Start,devops-sre,software-engineer
+pure_svm,occupation,syn:46c84897fd53,Junior DevOps Engineer - Full Time,devops-sre,software-engineer
+pure_svm,occupation,syn:84ee60c28a36,University Lecturer in Statistics,teacher,data-scientist
+pure_svm,occupation,syn:464d05c9f784,Disability Support Assistant - Full Time,aged-care,customer-service
+pure_svm,occupation,syn:c5cb293df4c9,Senior Data Engineer | Immediate Start,data-engineer,data-analyst
+pure_svm,occupation,syn:88012a49c1ab,Graduate Radiographer - Full Time,healthcare-allied,aged-care
+pure_svm,occupation,syn:e05eb7446064,Agile Delivery Manager,project-manager,truck-driver
+pure_svm,occupation,syn:04f1dfbe0517,Disability Support Assistant (Remote),aged-care,customer-service
+pure_svm,occupation,syn:53a85cf4516c,Senior Security Engineer | Immediate Start,cybersecurity,devops-sre
+pure_svm,occupation,syn:67923ea347c9,University Lecturer in Statistics - Full Time,teacher,data-scientist
+pure_svm,occupation,syn:83c8a016b02c,Disability Support Assistant,aged-care,customer-service
+pure_svm,occupation,syn:968b94aa78c7,Graduate Radiographer (Remote),healthcare-allied,aged-care
+pure_svm,occupation,syn:ac0b82379e5e,University Lecturer in Statistics (Remote),teacher,data-scientist
+pure_svm,occupation,syn:76bd692bf5ea,Junior Administrative Assistant | Immediate Start,admin,legal
+pure_svm,occupation,syn:4f0af86d53b3,Site Construction Supervisor | Immediate Start,construction,security-officer
+pure_svm,occupation,syn:68ae2635477e,Junior Administrative Assistant - Full Time,admin,legal
+pure_svm,occupation,syn:574a321441ee,Graduate Radiographer | Immediate Start,healthcare-allied,aged-care
+pure_svm,occupation,syn:88524a3fad77,Senior Data Engineer,data-engineer,data-analyst
+pure_svm,occupation,syn:10c06d055723,Senior Data Engineer - Full Time,data-engineer,data-analyst
+pure_svm,occupation,syn:b60ef3dd8121,University Lecturer in Statistics | Immediate Start,teacher,data-scientist
+pure_svm,seniority,syn:6048063250f2,Licensed Electrician | Immediate Start,mid,junior
+pure_svm,seniority,syn:157862809c82,Security Officer (Remote),mid,junior
+pure_svm,seniority,syn:23f1e5aece1c,Licensed Electrician (Remote),mid,junior
+pure_svm,seniority,syn:d155c5e55eea,Security Officer,mid,junior
+pure_svm,seniority,amb:eebdfabea9d0,Assistant to Senior Director - Global Team,junior,senior
+pure_svm,seniority,syn:d302a8782cc5,Data Scientist - Full Time,mid,junior
+pure_svm,seniority,syn:59b1bea7a2e4,Junior DevOps Engineer (Remote),junior,mid
+pure_svm,seniority,syn:7b75a0448cc9,Data Scientist (Remote),mid,junior
+pure_svm,seniority,syn:c1f31fd27bed,Automotive Mechanic,mid,senior
+pure_svm,seniority,syn:469e8292a462,Warehouse Storeperson | Immediate Start,mid,junior
+pure_svm,seniority,amb:3fd5111a8469,Data Analyst / Analytics Engineer,mid,senior
+pure_svm,seniority,syn:cf3a2083b95b,Graduate Nurse (Remote),junior,senior
+pure_svm,seniority,syn:30665dd99f81,Warehouse Storeperson,mid,junior
+pure_svm,seniority,syn:580daae2ca02,Retail Store Manager,senior,mid
+pure_svm,seniority,syn:395009c67fd6,Disability Support Assistant | Immediate Start,junior,mid
+pure_svm,seniority,amb:bfaa895cafad,Associate - Global Team,junior,mid
+pure_svm,seniority,syn:65f84fcb9578,Site Construction Supervisor (Remote),senior,mid
+pure_svm,seniority,amb:453123cfa0a4,Graduate Accountant,junior,senior
+pure_svm,seniority,amb:8eb06014c2f3,Associate,junior,senior
+pure_svm,seniority,syn:f03a8b9b96ac,Graduate Radiographer,junior,mid
+pure_svm,seniority,amb:64e294e6f774,Associate - Global Team,junior,senior
+pure_svm,seniority,syn:b465a50e1c07,Automotive Mechanic (Remote),mid,senior
+pure_svm,seniority,syn:6d6a5aff15fa,Graduate Nurse | Immediate Start,junior,senior
+pure_svm,seniority,amb:811abba096af,Data Analyst / Analytics Engineer (Hybrid),mid,senior
+pure_svm,seniority,syn:c788b01c9ad9,Security Officer - Full Time,mid,junior
+pure_svm,seniority,syn:2909eed97456,Site Construction Supervisor - Full Time,senior,mid
+pure_svm,seniority,syn:36626c9b171e,Junior DevOps Engineer | Immediate Start,junior,mid
+pure_svm,seniority,syn:46c84897fd53,Junior DevOps Engineer - Full Time,junior,mid
+pure_svm,seniority,syn:5b3704ba60a3,Interstate Linehaul Driver (Remote),senior,mid
+pure_svm,seniority,syn:40c16274ff02,Site Construction Supervisor,senior,mid
+pure_svm,seniority,syn:6b7b4b2d7549,Data Scientist | Immediate Start,mid,junior
+pure_svm,seniority,syn:84ee60c28a36,University Lecturer in Statistics,senior,mid
+pure_svm,seniority,syn:ae3031b542d9,Warehouse Storeperson (Remote),mid,junior
+pure_svm,seniority,syn:ab562e258f8c,Graduate Nurse,junior,senior
+pure_svm,seniority,syn:464d05c9f784,Disability Support Assistant - Full Time,junior,mid
+pure_svm,seniority,syn:88012a49c1ab,Graduate Radiographer - Full Time,junior,mid
+pure_svm,seniority,amb:34d5202b7b50,Associate (Hybrid),junior,mid
+pure_svm,seniority,syn:616a824226a1,Automotive Mechanic | Immediate Start,mid,senior
+pure_svm,seniority,syn:47823a3fe31e,Interstate Linehaul Driver | Immediate Start,senior,mid
+pure_svm,seniority,syn:8730afb1ae8e,Graduate Nurse - Full Time,junior,senior
+pure_svm,seniority,syn:04f1dfbe0517,Disability Support Assistant (Remote),junior,mid
+pure_svm,seniority,syn:9a853f765cec,Interstate Linehaul Driver,senior,mid
+pure_svm,seniority,syn:43a262f0909d,Automotive Mechanic - Full Time,mid,senior
+pure_svm,seniority,amb:e258e65b2538,Graduate Accountant - Global Team,junior,senior
+pure_svm,seniority,syn:c7d1f4ad3633,Data Scientist,mid,junior
+pure_svm,seniority,syn:83f1547630b2,Retail Store Manager | Immediate Start,senior,mid
+pure_svm,seniority,syn:67923ea347c9,University Lecturer in Statistics - Full Time,senior,mid
+pure_svm,seniority,syn:83c8a016b02c,Disability Support Assistant,junior,mid
+pure_svm,seniority,amb:c6a006b467f9,Graduate Accountant (Hybrid),junior,senior
+pure_svm,seniority,syn:1e88e4de610c,Retail Store Manager (Remote),senior,mid
+pure_svm,seniority,syn:9bce7e74e210,Frontend Developer | Immediate Start,mid,junior
+pure_svm,seniority,syn:968b94aa78c7,Graduate Radiographer (Remote),junior,mid
+pure_svm,seniority,syn:ac0b82379e5e,University Lecturer in Statistics (Remote),senior,mid
+pure_svm,seniority,amb:865ce012cc60,Assistant to Senior Director,junior,senior
+pure_svm,seniority,syn:4d50d488dcc1,Licensed Electrician,mid,junior
+pure_svm,seniority,syn:e98661a1a933,Interstate Linehaul Driver - Full Time,senior,mid
+pure_svm,seniority,syn:5529a3a64b39,Security Officer | Immediate Start,mid,junior
+pure_svm,seniority,syn:16ffc61518a1,Licensed Electrician - Full Time,mid,junior
+pure_svm,seniority,syn:c234ca0b6964,Retail Store Manager - Full Time,senior,mid
+pure_svm,seniority,syn:574a321441ee,Graduate Radiographer | Immediate Start,junior,mid
+pure_svm,seniority,amb:8f7dfa8aafba,Assistant to Senior Director (Hybrid),junior,senior
+pure_svm,seniority,amb:dbe66c2f11f1,Data Analyst / Analytics Engineer - Global Team,mid,senior
+pure_svm,seniority,amb:87ba9e40c7e9,Associate (Hybrid),junior,senior
+pure_svm,seniority,amb:58cb6ebbfac3,Operations Specialist,mid,senior
+pure_svm,seniority,syn:32cca0d338b3,Warehouse Storeperson - Full Time,mid,junior
+pure_svm,seniority,syn:b60ef3dd8121,University Lecturer in Statistics | Immediate Start,senior,mid
+online_hybrid,occupation,syn:559730c8569d,Senior Security Engineer (Remote),cybersecurity,unknown
+online_hybrid,occupation,amb:eebdfabea9d0,Assistant to Senior Director - Global Team,admin,unknown
+online_hybrid,occupation,amb:3fd5111a8469,Data Analyst / Analytics Engineer,data-analyst,data-engineer
+online_hybrid,occupation,syn:4b4fb34acbd0,Senior Security Engineer,cybersecurity,unknown
+online_hybrid,occupation,amb:8d7c3340f96b,Unit Coordinator - Global Team,registered-nurse,unknown
+online_hybrid,occupation,amb:bfaa895cafad,Associate - Global Team,legal,unknown
+online_hybrid,occupation,amb:9e6df679b6b9,Operations Specialist (Hybrid),customer-service,unknown
+online_hybrid,occupation,syn:174eb773826a,HR Assistant,hr,unknown
+online_hybrid,occupation,amb:8eb06014c2f3,Associate,accountant,unknown
+online_hybrid,occupation,amb:64e294e6f774,Associate - Global Team,accountant,unknown
+online_hybrid,occupation,amb:811abba096af,Data Analyst / Analytics Engineer (Hybrid),data-analyst,data-engineer
+online_hybrid,occupation,syn:8306b742a185,Senior Security Engineer - Full Time,cybersecurity,unknown
+online_hybrid,occupation,syn:5b3704ba60a3,Interstate Linehaul Driver (Remote),truck-driver,unknown
+online_hybrid,occupation,amb:34d5202b7b50,Associate (Hybrid),legal,unknown
+online_hybrid,occupation,syn:47823a3fe31e,Interstate Linehaul Driver | Immediate Start,truck-driver,unknown
+online_hybrid,occupation,syn:9a853f765cec,Interstate Linehaul Driver,truck-driver,unknown
+online_hybrid,occupation,syn:53a85cf4516c,Senior Security Engineer | Immediate Start,cybersecurity,unknown
+online_hybrid,occupation,amb:58b68ba328d4,Unit Coordinator,registered-nurse,unknown
+online_hybrid,occupation,syn:89b921c86fc3,HR Assistant | Immediate Start,hr,unknown
+online_hybrid,occupation,amb:bf41293d9615,Associate,legal,unknown
+online_hybrid,occupation,amb:82978ba08a26,Operations Specialist,customer-service,unknown
+online_hybrid,occupation,amb:865ce012cc60,Assistant to Senior Director,admin,unknown
+online_hybrid,occupation,amb:3fa08c7503f2,Unit Coordinator (Hybrid),registered-nurse,unknown
+online_hybrid,occupation,syn:e98661a1a933,Interstate Linehaul Driver - Full Time,truck-driver,unknown
+online_hybrid,occupation,syn:863ff5e79915,HR Assistant (Remote),hr,unknown
+online_hybrid,occupation,syn:370e811d6830,HR Assistant - Full Time,hr,unknown
+online_hybrid,occupation,amb:8f7dfa8aafba,Assistant to Senior Director (Hybrid),admin,unknown
+online_hybrid,occupation,amb:dbe66c2f11f1,Data Analyst / Analytics Engineer - Global Team,data-analyst,data-engineer
+online_hybrid,occupation,amb:8db91807092a,Operations Specialist - Global Team,customer-service,unknown
+online_hybrid,occupation,amb:87ba9e40c7e9,Associate (Hybrid),accountant,unknown
+online_hybrid,seniority,amb:eebdfabea9d0,Assistant to Senior Director - Global Team,junior,senior
+online_hybrid,seniority,amb:8d7c3340f96b,Unit Coordinator - Global Team,senior,mid
+online_hybrid,seniority,syn:580daae2ca02,Retail Store Manager,senior,mid
+online_hybrid,seniority,syn:365295eae5c0,Head Chef (Remote),senior,mid
+online_hybrid,seniority,amb:bfaa895cafad,Associate - Global Team,junior,mid
+online_hybrid,seniority,syn:65f84fcb9578,Site Construction Supervisor (Remote),senior,mid
+online_hybrid,seniority,syn:4ab6bf21cbf2,Head Chef | Immediate Start,senior,mid
+online_hybrid,seniority,amb:8eb06014c2f3,Associate,junior,mid
+online_hybrid,seniority,amb:64e294e6f774,Associate - Global Team,junior,mid
+online_hybrid,seniority,syn:2909eed97456,Site Construction Supervisor - Full Time,senior,mid
+online_hybrid,seniority,syn:5b3704ba60a3,Interstate Linehaul Driver (Remote),senior,mid
+online_hybrid,seniority,syn:40c16274ff02,Site Construction Supervisor,senior,mid
+online_hybrid,seniority,syn:84ee60c28a36,University Lecturer in Statistics,senior,mid
+online_hybrid,seniority,amb:34d5202b7b50,Associate (Hybrid),junior,mid
+online_hybrid,seniority,syn:47823a3fe31e,Interstate Linehaul Driver | Immediate Start,senior,mid
+online_hybrid,seniority,syn:9a853f765cec,Interstate Linehaul Driver,senior,mid
+online_hybrid,seniority,syn:a6b848b14b0d,Head Chef - Full Time,senior,mid
+online_hybrid,seniority,amb:58b68ba328d4,Unit Coordinator,senior,mid
+online_hybrid,seniority,syn:83f1547630b2,Retail Store Manager | Immediate Start,senior,mid
+online_hybrid,seniority,amb:bf41293d9615,Associate,junior,mid
+online_hybrid,seniority,syn:67923ea347c9,University Lecturer in Statistics - Full Time,senior,mid
+online_hybrid,seniority,syn:1e88e4de610c,Retail Store Manager (Remote),senior,mid
+online_hybrid,seniority,syn:ac0b82379e5e,University Lecturer in Statistics (Remote),senior,mid
+online_hybrid,seniority,amb:865ce012cc60,Assistant to Senior Director,junior,senior
+online_hybrid,seniority,amb:3fa08c7503f2,Unit Coordinator (Hybrid),senior,mid
+online_hybrid,seniority,syn:e98661a1a933,Interstate Linehaul Driver - Full Time,senior,mid
+online_hybrid,seniority,syn:4f0af86d53b3,Site Construction Supervisor | Immediate Start,senior,mid
+online_hybrid,seniority,syn:c234ca0b6964,Retail Store Manager - Full Time,senior,mid
+online_hybrid,seniority,amb:8f7dfa8aafba,Assistant to Senior Director (Hybrid),junior,senior
+online_hybrid,seniority,amb:87ba9e40c7e9,Associate (Hybrid),junior,mid
+online_hybrid,seniority,syn:bb95557f8944,Head Chef,senior,mid
+online_hybrid,seniority,syn:b60ef3dd8121,University Lecturer in Statistics | Immediate Start,senior,mid

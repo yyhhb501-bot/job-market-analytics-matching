@@ -9,8 +9,8 @@ import { formatLocation, formatSalary, labelSource } from "@/lib/format";
 const SAMPLE_RESUMES: { label: string; text: string }[] = [
   {
     label: "数据分析师 / Data Analyst",
-    text: `Zhanjun Yang - Data Analyst & Analytics Specialist
-Education: B.S. in Statistics, GPA 3.5/4.0
+    text: `Fictional Example - Data Analyst & Analytics Specialist
+Education: B.S. in Statistics
 Skills: Python (pandas, numpy, scikit-learn), SQL (PostgreSQL, Snowflake), Tableau, Power BI, Metabase, dbt, A/B Testing, ETL, Excel.
 Experience:
 - Built pricing-strategy and user growth dashboards using SQL and Tableau.
@@ -161,6 +161,14 @@ export default function MatchPage() {
                         {result.semantic_score != null ? (
                           <span className="tag" style={{ background: "#e0f2fe", color: "#0369a1", fontSize: "0.78rem" }}>
                             余弦语义: {result.semantic_score}%
+                          </span>
+                        ) : data.engine.startsWith("semantic") ? (
+                          <span
+                            className="tag"
+                            title="该职位无可兼容向量，本条按关键词降级排序，未参与余弦比较"
+                            style={{ background: "#f1f5f9", color: "#475569", fontSize: "0.78rem" }}
+                          >
+                            该职位无向量 · 关键词降级
                           </span>
                         ) : null}
                         {result.keyword_coverage_score != null ? (

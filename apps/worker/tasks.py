@@ -57,7 +57,7 @@ BACKOFF_JITTER_SECONDS = 30.0
 
 def retry_backoff(retries: int) -> float:
     """Exponential backoff with jitter, capped at 15 minutes."""
-    base = min(BACKOFF_BASE_SECONDS * (2**max(retries, 0)), BACKOFF_CAP_SECONDS)
+    base = min(BACKOFF_BASE_SECONDS * (2 ** max(retries, 0)), BACKOFF_CAP_SECONDS)
     return base + random.uniform(0, BACKOFF_JITTER_SECONDS)
 
 
@@ -122,9 +122,11 @@ def expand_collector_specs(
     if keywords:
         for name in search:
             if name in COUNTRY_SOURCES:
-                countries = [
-                    c.strip() for c in str(base.get("country") or "").split(",") if c.strip()
-                ] or settings.country_list or [None]
+                countries = (
+                    [c.strip() for c in str(base.get("country") or "").split(",") if c.strip()]
+                    or settings.country_list
+                    or [None]
+                )
             else:
                 countries = [None]
             for keyword in keywords:
@@ -223,9 +225,7 @@ def collect_source_sync(source_name: str, params: dict | None = None) -> dict:
                     "reason": "daily new-job target met",
                 }
             search.results_wanted = remaining
-    stats = asyncio.run(
-        run_collector(collector, search, get_session_factory())
-    )
+    stats = asyncio.run(run_collector(collector, search, get_session_factory()))
     return stats.as_dict()
 
 
@@ -245,7 +245,9 @@ def au_nurse_remaining(session: Any, source_name: str, requested: int) -> int:
         or 0
     )
     this_hour = int(
-        session.scalar(select(func.count()).select_from(Job).where(*base, Job.first_seen_at >= hour))
+        session.scalar(
+            select(func.count()).select_from(Job).where(*base, Job.first_seen_at >= hour)
+        )
         or 0
     )
     return max(min(int(requested), SEEK_DAILY_TARGET - today, SEEK_HOURLY_LIMIT - this_hour), 0)
@@ -256,8 +258,11 @@ def au_nurse_plan_params(settings: Settings) -> tuple[str | None, dict | None]:
     allowed_sources = {"adzuna"}
     enabled = set(enabled_source_names(settings))
     source = next(
-        (item.strip().lower() for item in settings.au_nurse_plan_sources.split(",")
-         if item.strip().lower() in allowed_sources and item.strip().lower() in enabled),
+        (
+            item.strip().lower()
+            for item in settings.au_nurse_plan_sources.split(",")
+            if item.strip().lower() in allowed_sources and item.strip().lower() in enabled
+        ),
         None,
     )
     keywords = [item.strip() for item in settings.au_nurse_plan_keywords.split(",") if item.strip()]
@@ -329,7 +334,9 @@ def enrich_jobs_sync(batch_size: int = 500, with_embeddings: bool = True) -> dic
             if job.summary_source != "llm":
                 job.summary = enriched["summary"]
                 job.summary_source = "extractive" if enriched["summary"] else None
-            job.occupation_group = job.occupation_group or enriched.get("occupation_group") or "other"
+            job.occupation_group = (
+                job.occupation_group or enriched.get("occupation_group") or "other"
+            )
             job.seniority = job.seniority or enriched.get("seniority")
             updated += 1
 
@@ -349,7 +356,14 @@ def enrich_jobs_sync(batch_size: int = 500, with_embeddings: bool = True) -> dic
             if embedder is not None:
                 pending = session.scalars(
                     select(Job)
-                    .where(Job.embedding.is_(None), Job.description.is_not(None))
+                    .where(
+                        or_(
+                            Job.embedding.is_(None),
+                            Job.embedding_model.is_(None),
+                            Job.embedding_model != embedder.name,
+                        ),
+                        Job.description.is_not(None),
+                    )
                     .limit(batch_size)
                 ).all()
                 if pending:
@@ -358,6 +372,7 @@ def enrich_jobs_sync(batch_size: int = 500, with_embeddings: bool = True) -> dic
                     )
                     for job, vector in zip(pending, vectors):
                         job.embedding = vector
+                        job.embedding_model = embedder.name
                     session.commit()
                     embedded = len(pending)
     return {"enriched": updated, "embedded": embedded}
@@ -387,9 +402,7 @@ def generate_summaries_sync(batch_size: int = 50) -> dict:
         async def _run_all() -> list:
             return await asyncio.gather(
                 *(
-                    client.complete(
-                        build_summary_prompt(job.title, job.description, max_chars)
-                    )
+                    client.complete(build_summary_prompt(job.title, job.description, max_chars))
                     for job in jobs
                 ),
                 return_exceptions=True,
@@ -512,7 +525,6 @@ def generate_summaries(batch_size: int = 50) -> dict:
     return generate_summaries_sync(batch_size)
 
 
-@celery_app.task(name="jobagg.collect_all")
 def _dispatch_header(specs: list[tuple[str, dict]]) -> list:
     """Build fan-out signatures: one chain per source, parallel across sources.
 
@@ -528,12 +540,11 @@ def _dispatch_header(specs: list[tuple[str, dict]]) -> list:
             # Immutable signatures (.si): a chain prepends the previous
             # task's result to the next call, which collect_source does not
             # accept — serial execution must not change the arguments.
-            header.append(
-                chain(*[collect_source.si(name, spec) for name, spec in source_group])
-            )
+            header.append(chain(*[collect_source.si(name, spec) for name, spec in source_group]))
     return header
 
 
+@celery_app.task(name="jobagg.collect_all")
 def collect_all(params: dict | None = None) -> dict:
     settings = get_settings()
     specs = expand_collector_specs(settings, params)

@@ -1,11 +1,8 @@
-import CollectorControls from "@/components/CollectorControls";
 import {
-  getCollectorStatus,
   getRuns,
   getRunsSummary,
   getSourceHealth,
   type CollectorRun,
-  type CollectorStatus,
   type RunsSummary,
   type SourceHealth,
 } from "@/lib/api";
@@ -33,25 +30,17 @@ export default async function StatusPage() {
   let runs: CollectorRun[] = [];
   let summary: RunsSummary | null = null;
   let health: SourceHealth[] = [];
-  let controls: CollectorStatus | null = null;
   let error: string | null = null;
 
   try {
-    [runs, summary, health, controls] = await Promise.all([
+    [runs, summary, health] = await Promise.all([
       getRuns(50),
       getRunsSummary(),
       getSourceHealth(),
-      getCollectorStatus(),
     ]);
   } catch (cause) {
     error = cause instanceof Error ? cause.message : "无法连接 API";
   }
-
-  const weekly = controls?.weekly;
-  const weeklyPercent =
-    weekly && weekly.target > 0
-      ? Math.min(Math.round((weekly.new_jobs / weekly.target) * 100), 100)
-      : null;
 
   return (
     <>
@@ -62,25 +51,6 @@ export default async function StatusPage() {
 
       {error ? <div className="notice">无法连接 API（{error}）。</div> : null}
 
-      {weekly && weekly.target > 0 ? (
-        <div className="job-card" data-testid="weekly-progress">
-          <div className="job-card-head">
-            <h2>本周有效新增</h2>
-            <span className="badge">{weeklyPercent}%</span>
-          </div>
-          <p className="meta">
-            {weekly.new_jobs} / {weekly.target} 条
-            （去重后、标题/公司/链接完整且未失效；自 {formatDate(weekly.week_start) ?? "本周初"}）
-          </p>
-        </div>
-      ) : null}
-
-      {controls ? (
-        <>
-          <h2 className="section-title">采集控制</h2>
-          <CollectorControls sources={controls.sources} />
-        </>
-      ) : null}
 
       {summary && summary.sources.length > 0 ? (
         <div className="job-grid" data-testid="source-cards">

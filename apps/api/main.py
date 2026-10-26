@@ -13,6 +13,7 @@ from apps.api.config import check_production_settings, get_settings
 from apps.api.metrics import record_http
 from apps.api.routers import (
     boards,
+    collection,
     collector,
     compare,
     export,
@@ -22,6 +23,7 @@ from apps.api.routers import (
     jobs,
     match,
     member_auth,
+    methodology,
     metrics,
     runs,
     saved_searches,
@@ -75,6 +77,8 @@ app.include_router(member_auth.router, prefix="/api/v1")
 app.include_router(runs.router, prefix="/api/v1")
 app.include_router(compare.router, prefix="/api/v1")
 app.include_router(boards.router, prefix="/api/v1")
+app.include_router(collection.router, prefix="/api/v1")
+app.include_router(methodology.router, prefix="/api/v1")
 app.include_router(collector.router, prefix="/api/v1")
 app.include_router(source_authorizations.router, prefix="/api/v1")
 if settings.enable_import_gateway:

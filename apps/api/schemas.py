@@ -292,6 +292,57 @@ class SourceHealthOut(BaseModel):
     schema_drift: bool = False
 
 
+class CollectionTrendPoint(BaseModel):
+    """New internal records collected on one Beijing-time calendar day."""
+
+    date: str
+    new_jobs: int
+
+
+class CollectionSourceRow(BaseModel):
+    """Whitelisted per-source figures for the public collection dashboard.
+
+    Internal counts cover every collected record; public counts cover only
+    records displayable under the current source-authorization policy. The
+    two must never be conflated on public pages.
+    """
+
+    source: str
+    internal_total: int
+    public_total: int
+    today_new_bj: int
+    seven_day_new_bj: int
+    last_ingest_at: datetime | None = None
+    last_run_status: str | None = None
+    last_run_at: datetime | None = None
+
+
+class CollectionLocalUploadRow(BaseModel):
+    """Local-collector upload aggregates; no tokens, owners or raw queries."""
+
+    source: str
+    today_accepted_bj: int
+    today_duplicate_bj: int
+    today_rejected_bj: int
+    last_batch_id: int | None = None
+    last_batch_status: str | None = None
+    last_batch_accepted: int | None = None
+    last_batch_duplicate: int | None = None
+    last_batch_rejected: int | None = None
+    last_batch_completed_at: datetime | None = None
+    collector_state: str = "none"  # online | stale | offline | none
+    collector_last_seen_at: datetime | None = None
+
+
+class CollectionOverviewResponse(BaseModel):
+    generated_at: datetime
+    daily_target_per_source: int  # a target, not an achievement
+    sources: list[CollectionSourceRow]
+    local_uploads: list[CollectionLocalUploadRow]
+    seven_day_trend: list[CollectionTrendPoint]
+    trend_scope: str = "internal"
+
+
 class MatchRequest(BaseModel):
     resume: str = Field(min_length=1, max_length=20000)
     limit: int = Field(default=20, ge=1, le=100)
@@ -315,6 +366,7 @@ class MatchResult(BaseModel):
 class MatchResponse(BaseModel):
     engine: str = "keyword"
     reranked: bool = False
+    data_scope: Literal["public_jobs", "illustrative_examples"] = "public_jobs"
     results: list[MatchResult]
 
 

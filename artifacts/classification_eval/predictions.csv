@@ -1,0 +1,130 @@
+sample_id,split,source,label_origin,dedup_group,title,true_occupation,true_seniority,baseline_occupation,baseline_seniority,pure_svm_occupation,pure_svm_seniority,online_hybrid_occupation,online_hybrid_seniority
+syn:e3a96cfd9f69,test,synthetic_template,hand_authored_template,3687c38682bd|junior-devops-engineer,Junior DevOps Engineer,devops-sre,junior,devops-sre,junior,software-engineer,junior,devops-sre,junior
+syn:6048063250f2,test,synthetic_template,hand_authored_template,8ac8b179d819|licensed-electrician,Licensed Electrician | Immediate Start,electrician,mid,electrician,mid,electrician,junior,electrician,mid
+syn:157862809c82,test,synthetic_template,hand_authored_template,7a89e09d22a6|security-officer,Security Officer (Remote),security-officer,mid,security-officer,mid,security-officer,junior,security-officer,mid
+syn:23f1e5aece1c,test,synthetic_template,hand_authored_template,8ac8b179d819|licensed-electrician,Licensed Electrician (Remote),electrician,mid,electrician,mid,electrician,junior,electrician,mid
+syn:559730c8569d,test,synthetic_template,hand_authored_template,2e212dff3101|senior-security-engineer,Senior Security Engineer (Remote),cybersecurity,senior,unknown,senior,devops-sre,senior,unknown,senior
+syn:d155c5e55eea,test,synthetic_template,hand_authored_template,7a89e09d22a6|security-officer,Security Officer,security-officer,mid,security-officer,mid,security-officer,junior,security-officer,mid
+amb:eebdfabea9d0,test,ambiguous_mixed,hand_authored_template,ee824896c7d5|assistant-to-senior-director,Assistant to Senior Director - Global Team,admin,junior,unknown,senior,admin,senior,unknown,senior
+syn:b75d6b7ec757,test,synthetic_template,hand_authored_template,06957fcd71b3|senior-backend-engineer,Senior Backend Engineer,software-engineer,senior,software-engineer,senior,software-engineer,senior,software-engineer,senior
+syn:799dc073d27b,test,synthetic_template,hand_authored_template,06957fcd71b3|senior-backend-engineer,Senior Backend Engineer (Remote),software-engineer,senior,software-engineer,senior,software-engineer,senior,software-engineer,senior
+syn:a38e465e3930,test,synthetic_template,hand_authored_template,798508e78c97|agile-delivery-manager,Agile Delivery Manager (Remote),project-manager,mid,project-manager,senior,project-manager,mid,project-manager,mid
+syn:b0666f3056be,test,synthetic_template,hand_authored_template,d384280c3f9a|junior-administrative-assistant,Junior Administrative Assistant (Remote),admin,junior,admin,junior,legal,junior,admin,junior
+syn:a184de0ee95f,test,synthetic_template,hand_authored_template,06957fcd71b3|senior-backend-engineer,Senior Backend Engineer - Full Time,software-engineer,senior,software-engineer,senior,software-engineer,senior,software-engineer,senior
+syn:d302a8782cc5,test,synthetic_template,hand_authored_template,6a57c9fd44b9|data-scientist,Data Scientist - Full Time,data-scientist,mid,data-scientist,mid,data-scientist,junior,data-scientist,mid
+syn:59b1bea7a2e4,test,synthetic_template,hand_authored_template,3687c38682bd|junior-devops-engineer,Junior DevOps Engineer (Remote),devops-sre,junior,devops-sre,junior,software-engineer,mid,devops-sre,junior
+syn:7b75a0448cc9,test,synthetic_template,hand_authored_template,6a57c9fd44b9|data-scientist,Data Scientist (Remote),data-scientist,mid,data-scientist,mid,data-scientist,junior,data-scientist,mid
+syn:c1f31fd27bed,test,synthetic_template,hand_authored_template,ed4e7741eb20|automotive-mechanic,Automotive Mechanic,mechanic,mid,mechanic,mid,mechanic,senior,mechanic,mid
+syn:8750204de427,test,synthetic_template,hand_authored_template,c7a78a150afc|junior-business-analyst,Junior Business Analyst (Remote),business-analyst,junior,business-analyst,junior,business-analyst,junior,business-analyst,junior
+syn:469e8292a462,test,synthetic_template,hand_authored_template,40370eff5aeb|warehouse-storeperson,Warehouse Storeperson | Immediate Start,warehouse,mid,warehouse,mid,warehouse,junior,warehouse,mid
+amb:3fd5111a8469,test,ambiguous_mixed,hand_authored_template,5e68beba74e3|data-analyst---analytics-engineer,Data Analyst / Analytics Engineer,data-analyst,mid,data-engineer,mid,data-analyst,senior,data-engineer,mid
+syn:4b4fb34acbd0,test,synthetic_template,hand_authored_template,2e212dff3101|senior-security-engineer,Senior Security Engineer,cybersecurity,senior,unknown,senior,software-engineer,senior,unknown,senior
+amb:8d7c3340f96b,test,ambiguous_mixed,hand_authored_template,d77a97af01cd|unit-coordinator,Unit Coordinator - Global Team,registered-nurse,senior,unknown,mid,registered-nurse,senior,unknown,mid
+syn:cf3a2083b95b,test,synthetic_template,hand_authored_template,f05b6ac727cc|graduate-nurse,Graduate Nurse (Remote),registered-nurse,junior,registered-nurse,junior,registered-nurse,senior,registered-nurse,junior
+syn:30665dd99f81,test,synthetic_template,hand_authored_template,40370eff5aeb|warehouse-storeperson,Warehouse Storeperson,warehouse,mid,warehouse,mid,warehouse,junior,warehouse,mid
+syn:580daae2ca02,test,synthetic_template,hand_authored_template,a7ea288816b7|retail-store-manager,Retail Store Manager,retail,senior,retail,senior,retail,mid,retail,mid
+syn:365295eae5c0,test,synthetic_template,hand_authored_template,53b9741cff87|head-chef,Head Chef (Remote),chef,senior,chef,mid,chef,senior,chef,mid
+syn:395009c67fd6,test,synthetic_template,hand_authored_template,c511e2c23c8b|disability-support-assistant,Disability Support Assistant | Immediate Start,aged-care,junior,aged-care,junior,customer-service,mid,aged-care,junior
+amb:bfaa895cafad,test,ambiguous_mixed,hand_authored_template,e7c2b091b624|associate,Associate - Global Team,legal,junior,unknown,mid,legal,mid,unknown,mid
+syn:0e2d14e4c00e,test,synthetic_template,hand_authored_template,d384280c3f9a|junior-administrative-assistant,Junior Administrative Assistant,admin,junior,admin,junior,legal,junior,admin,junior
+syn:e61389a341b1,test,synthetic_template,hand_authored_template,87c10f6a3abe|lead-analytics-specialist,Lead Analytics Specialist (Remote),data-analyst,senior,data-analyst,senior,data-analyst,senior,data-analyst,senior
+syn:65f84fcb9578,test,synthetic_template,hand_authored_template,41e09ae82039|site-construction-supervisor,Site Construction Supervisor (Remote),construction,senior,construction,mid,security-officer,mid,construction,mid
+amb:9e6df679b6b9,test,ambiguous_mixed,hand_authored_template,f355279aecb8|operations-specialist,Operations Specialist (Hybrid),customer-service,mid,unknown,mid,customer-service,mid,unknown,mid
+syn:4ab6bf21cbf2,test,synthetic_template,hand_authored_template,53b9741cff87|head-chef,Head Chef | Immediate Start,chef,senior,chef,mid,chef,senior,chef,mid
+syn:174eb773826a,test,synthetic_template,hand_authored_template,140e721fc319|hr-assistant,HR Assistant,hr,junior,unknown,junior,hr,junior,unknown,junior
+syn:beca23db07db,test,synthetic_template,hand_authored_template,798508e78c97|agile-delivery-manager,Agile Delivery Manager | Immediate Start,project-manager,mid,project-manager,senior,project-manager,mid,project-manager,mid
+amb:2648a5a2f86d,test,ambiguous_mixed,hand_authored_template,ee78b506746c|financial-analyst---accountant,Financial Analyst & Accountant,financial-analyst,mid,financial-analyst,mid,financial-analyst,mid,financial-analyst,mid
+amb:453123cfa0a4,test,ambiguous_mixed,hand_authored_template,f5de1f78d249|graduate-accountant,Graduate Accountant,accountant,junior,accountant,junior,accountant,senior,accountant,junior
+syn:36cdd2867611,test,synthetic_template,hand_authored_template,d375e691487f|senior-data-engineer,Senior Data Engineer (Remote),data-engineer,senior,data-engineer,senior,data-analyst,senior,data-engineer,senior
+amb:8eb06014c2f3,test,ambiguous_mixed,hand_authored_template,e7c2b091b624|associate,Associate,accountant,junior,unknown,mid,accountant,senior,unknown,mid
+syn:f03a8b9b96ac,test,synthetic_template,hand_authored_template,9adf041feffa|graduate-radiographer,Graduate Radiographer,healthcare-allied,junior,healthcare-allied,junior,aged-care,mid,healthcare-allied,junior
+amb:64e294e6f774,test,ambiguous_mixed,hand_authored_template,e7c2b091b624|associate,Associate - Global Team,accountant,junior,unknown,mid,accountant,senior,unknown,mid
+syn:b465a50e1c07,test,synthetic_template,hand_authored_template,ed4e7741eb20|automotive-mechanic,Automotive Mechanic (Remote),mechanic,mid,mechanic,mid,mechanic,senior,mechanic,mid
+syn:6d6a5aff15fa,test,synthetic_template,hand_authored_template,f05b6ac727cc|graduate-nurse,Graduate Nurse | Immediate Start,registered-nurse,junior,registered-nurse,junior,registered-nurse,senior,registered-nurse,junior
+amb:811abba096af,test,ambiguous_mixed,hand_authored_template,5e68beba74e3|data-analyst---analytics-engineer,Data Analyst / Analytics Engineer (Hybrid),data-analyst,mid,data-engineer,mid,data-analyst,senior,data-engineer,mid
+amb:e78e27cd45e7,test,ambiguous_mixed,hand_authored_template,f355279aecb8|operations-specialist,Operations Specialist (Hybrid),warehouse,mid,warehouse,mid,warehouse,mid,warehouse,mid
+syn:c788b01c9ad9,test,synthetic_template,hand_authored_template,7a89e09d22a6|security-officer,Security Officer - Full Time,security-officer,mid,security-officer,mid,security-officer,junior,security-officer,mid
+syn:8306b742a185,test,synthetic_template,hand_authored_template,2e212dff3101|senior-security-engineer,Senior Security Engineer - Full Time,cybersecurity,senior,unknown,senior,devops-sre,senior,unknown,senior
+syn:2909eed97456,test,synthetic_template,hand_authored_template,41e09ae82039|site-construction-supervisor,Site Construction Supervisor - Full Time,construction,senior,construction,mid,security-officer,mid,construction,mid
+syn:36626c9b171e,test,synthetic_template,hand_authored_template,3687c38682bd|junior-devops-engineer,Junior DevOps Engineer | Immediate Start,devops-sre,junior,devops-sre,junior,software-engineer,mid,devops-sre,junior
+syn:46c84897fd53,test,synthetic_template,hand_authored_template,3687c38682bd|junior-devops-engineer,Junior DevOps Engineer - Full Time,devops-sre,junior,devops-sre,junior,software-engineer,mid,devops-sre,junior
+syn:5b3704ba60a3,test,synthetic_template,hand_authored_template,5febf42c419b|interstate-linehaul-driver,Interstate Linehaul Driver (Remote),truck-driver,senior,unknown,mid,truck-driver,mid,unknown,mid
+syn:991a54f1d0e2,test,synthetic_template,hand_authored_template,1d20112f6651|senior-product-owner,Senior Product Owner - Full Time,product-manager,senior,product-manager,senior,product-manager,senior,product-manager,senior
+syn:40c16274ff02,test,synthetic_template,hand_authored_template,41e09ae82039|site-construction-supervisor,Site Construction Supervisor,construction,senior,construction,mid,construction,mid,construction,mid
+syn:6b7b4b2d7549,test,synthetic_template,hand_authored_template,6a57c9fd44b9|data-scientist,Data Scientist | Immediate Start,data-scientist,mid,data-scientist,mid,data-scientist,junior,data-scientist,mid
+syn:84ee60c28a36,test,synthetic_template,hand_authored_template,32cad679627e|university-lecturer-in-statistics,University Lecturer in Statistics,teacher,senior,teacher,mid,data-scientist,mid,teacher,mid
+syn:3033c686615e,test,synthetic_template,hand_authored_template,f0eba3e4b927|frontend-developer,Frontend Developer - Full Time,software-engineer,mid,software-engineer,mid,software-engineer,mid,software-engineer,mid
+syn:ae3031b542d9,test,synthetic_template,hand_authored_template,40370eff5aeb|warehouse-storeperson,Warehouse Storeperson (Remote),warehouse,mid,warehouse,mid,warehouse,junior,warehouse,mid
+syn:ab562e258f8c,test,synthetic_template,hand_authored_template,f05b6ac727cc|graduate-nurse,Graduate Nurse,registered-nurse,junior,registered-nurse,junior,registered-nurse,senior,registered-nurse,junior
+amb:0b5d07c91615,test,ambiguous_mixed,hand_authored_template,8ea07ec80bcf|client-advisor,Client Advisor - Global Team,sales,mid,sales,mid,sales,mid,sales,mid
+syn:464d05c9f784,test,synthetic_template,hand_authored_template,c511e2c23c8b|disability-support-assistant,Disability Support Assistant - Full Time,aged-care,junior,aged-care,junior,customer-service,mid,aged-care,junior
+syn:c5cb293df4c9,test,synthetic_template,hand_authored_template,d375e691487f|senior-data-engineer,Senior Data Engineer | Immediate Start,data-engineer,senior,data-engineer,senior,data-analyst,senior,data-engineer,senior
+syn:26a12c433051,test,synthetic_template,hand_authored_template,06957fcd71b3|senior-backend-engineer,Senior Backend Engineer | Immediate Start,software-engineer,senior,software-engineer,senior,software-engineer,senior,software-engineer,senior
+syn:88012a49c1ab,test,synthetic_template,hand_authored_template,9adf041feffa|graduate-radiographer,Graduate Radiographer - Full Time,healthcare-allied,junior,healthcare-allied,junior,aged-care,mid,healthcare-allied,junior
+amb:34d5202b7b50,test,ambiguous_mixed,hand_authored_template,e7c2b091b624|associate,Associate (Hybrid),legal,junior,unknown,mid,legal,mid,unknown,mid
+syn:46eeeef0a36e,test,synthetic_template,hand_authored_template,1d20112f6651|senior-product-owner,Senior Product Owner (Remote),product-manager,senior,product-manager,senior,product-manager,senior,product-manager,senior
+syn:616a824226a1,test,synthetic_template,hand_authored_template,ed4e7741eb20|automotive-mechanic,Automotive Mechanic | Immediate Start,mechanic,mid,mechanic,mid,mechanic,senior,mechanic,mid
+syn:47823a3fe31e,test,synthetic_template,hand_authored_template,5febf42c419b|interstate-linehaul-driver,Interstate Linehaul Driver | Immediate Start,truck-driver,senior,unknown,mid,truck-driver,mid,unknown,mid
+syn:8730afb1ae8e,test,synthetic_template,hand_authored_template,f05b6ac727cc|graduate-nurse,Graduate Nurse - Full Time,registered-nurse,junior,registered-nurse,junior,registered-nurse,senior,registered-nurse,junior
+syn:e05eb7446064,test,synthetic_template,hand_authored_template,798508e78c97|agile-delivery-manager,Agile Delivery Manager,project-manager,mid,project-manager,senior,truck-driver,mid,project-manager,mid
+syn:04f1dfbe0517,test,synthetic_template,hand_authored_template,c511e2c23c8b|disability-support-assistant,Disability Support Assistant (Remote),aged-care,junior,aged-care,junior,customer-service,mid,aged-care,junior
+syn:9a853f765cec,test,synthetic_template,hand_authored_template,5febf42c419b|interstate-linehaul-driver,Interstate Linehaul Driver,truck-driver,senior,unknown,mid,truck-driver,mid,unknown,mid
+syn:4bb34045b196,test,synthetic_template,hand_authored_template,798508e78c97|agile-delivery-manager,Agile Delivery Manager - Full Time,project-manager,mid,project-manager,senior,project-manager,mid,project-manager,mid
+amb:575f36b9a624,test,ambiguous_mixed,hand_authored_template,ee78b506746c|financial-analyst---accountant,Financial Analyst & Accountant - Global Team,financial-analyst,mid,financial-analyst,mid,financial-analyst,mid,financial-analyst,mid
+syn:a6b848b14b0d,test,synthetic_template,hand_authored_template,53b9741cff87|head-chef,Head Chef - Full Time,chef,senior,chef,mid,chef,senior,chef,mid
+syn:53a85cf4516c,test,synthetic_template,hand_authored_template,2e212dff3101|senior-security-engineer,Senior Security Engineer | Immediate Start,cybersecurity,senior,unknown,senior,devops-sre,senior,unknown,senior
+amb:78c572cd2cde,test,ambiguous_mixed,hand_authored_template,e98221164144|growth-marketing-engineer,Growth Marketing Engineer,marketing,mid,marketing,mid,marketing,mid,marketing,mid
+syn:43a262f0909d,test,synthetic_template,hand_authored_template,ed4e7741eb20|automotive-mechanic,Automotive Mechanic - Full Time,mechanic,mid,mechanic,mid,mechanic,senior,mechanic,mid
+amb:58b68ba328d4,test,ambiguous_mixed,hand_authored_template,d77a97af01cd|unit-coordinator,Unit Coordinator,registered-nurse,senior,unknown,mid,registered-nurse,senior,unknown,mid
+amb:e258e65b2538,test,ambiguous_mixed,hand_authored_template,f5de1f78d249|graduate-accountant,Graduate Accountant - Global Team,accountant,junior,accountant,junior,accountant,senior,accountant,junior
+syn:c7d1f4ad3633,test,synthetic_template,hand_authored_template,6a57c9fd44b9|data-scientist,Data Scientist,data-scientist,mid,data-scientist,mid,data-scientist,junior,data-scientist,mid
+syn:2555375c6aad,test,synthetic_template,hand_authored_template,1d20112f6651|senior-product-owner,Senior Product Owner | Immediate Start,product-manager,senior,product-manager,senior,product-manager,senior,product-manager,senior
+syn:89b921c86fc3,test,synthetic_template,hand_authored_template,140e721fc319|hr-assistant,HR Assistant | Immediate Start,hr,junior,unknown,junior,hr,junior,unknown,junior
+amb:1add93dbd60f,test,ambiguous_mixed,hand_authored_template,e98221164144|growth-marketing-engineer,Growth Marketing Engineer - Global Team,marketing,mid,marketing,mid,marketing,mid,marketing,mid
+syn:d59a0dedf905,test,synthetic_template,hand_authored_template,c7a78a150afc|junior-business-analyst,Junior Business Analyst - Full Time,business-analyst,junior,business-analyst,junior,business-analyst,junior,business-analyst,junior
+syn:83f1547630b2,test,synthetic_template,hand_authored_template,a7ea288816b7|retail-store-manager,Retail Store Manager | Immediate Start,retail,senior,retail,senior,retail,mid,retail,mid
+amb:0a0fb93fa6dc,test,ambiguous_mixed,hand_authored_template,ee78b506746c|financial-analyst---accountant,Financial Analyst & Accountant (Hybrid),financial-analyst,mid,financial-analyst,mid,financial-analyst,mid,financial-analyst,mid
+amb:bf41293d9615,test,ambiguous_mixed,hand_authored_template,e7c2b091b624|associate,Associate,legal,junior,unknown,mid,legal,junior,unknown,mid
+syn:67923ea347c9,test,synthetic_template,hand_authored_template,32cad679627e|university-lecturer-in-statistics,University Lecturer in Statistics - Full Time,teacher,senior,teacher,mid,data-scientist,mid,teacher,mid
+syn:7a0c6e9a2386,test,synthetic_template,hand_authored_template,87c10f6a3abe|lead-analytics-specialist,Lead Analytics Specialist,data-analyst,senior,data-analyst,senior,data-analyst,senior,data-analyst,senior
+syn:83c8a016b02c,test,synthetic_template,hand_authored_template,c511e2c23c8b|disability-support-assistant,Disability Support Assistant,aged-care,junior,aged-care,junior,customer-service,mid,aged-care,junior
+amb:c6a006b467f9,test,ambiguous_mixed,hand_authored_template,f5de1f78d249|graduate-accountant,Graduate Accountant (Hybrid),accountant,junior,accountant,junior,accountant,senior,accountant,junior
+syn:6df93f0b6168,test,synthetic_template,hand_authored_template,1d20112f6651|senior-product-owner,Senior Product Owner,product-manager,senior,product-manager,senior,product-manager,senior,product-manager,senior
+syn:1e88e4de610c,test,synthetic_template,hand_authored_template,a7ea288816b7|retail-store-manager,Retail Store Manager (Remote),retail,senior,retail,senior,retail,mid,retail,mid
+amb:82978ba08a26,test,ambiguous_mixed,hand_authored_template,f355279aecb8|operations-specialist,Operations Specialist,customer-service,mid,unknown,mid,customer-service,mid,unknown,mid
+syn:9bce7e74e210,test,synthetic_template,hand_authored_template,f0eba3e4b927|frontend-developer,Frontend Developer | Immediate Start,software-engineer,mid,software-engineer,mid,software-engineer,junior,software-engineer,mid
+syn:968b94aa78c7,test,synthetic_template,hand_authored_template,9adf041feffa|graduate-radiographer,Graduate Radiographer (Remote),healthcare-allied,junior,healthcare-allied,junior,aged-care,mid,healthcare-allied,junior
+syn:ac0b82379e5e,test,synthetic_template,hand_authored_template,32cad679627e|university-lecturer-in-statistics,University Lecturer in Statistics (Remote),teacher,senior,teacher,mid,data-scientist,mid,teacher,mid
+amb:c9f09a286997,test,ambiguous_mixed,hand_authored_template,e98221164144|growth-marketing-engineer,Growth Marketing Engineer (Hybrid),marketing,mid,marketing,mid,marketing,mid,marketing,mid
+amb:865ce012cc60,test,ambiguous_mixed,hand_authored_template,ee824896c7d5|assistant-to-senior-director,Assistant to Senior Director,admin,junior,unknown,senior,admin,senior,unknown,senior
+amb:3fa08c7503f2,test,ambiguous_mixed,hand_authored_template,d77a97af01cd|unit-coordinator,Unit Coordinator (Hybrid),registered-nurse,senior,unknown,mid,registered-nurse,senior,unknown,mid
+syn:4d50d488dcc1,test,synthetic_template,hand_authored_template,8ac8b179d819|licensed-electrician,Licensed Electrician,electrician,mid,electrician,mid,electrician,junior,electrician,mid
+syn:e98661a1a933,test,synthetic_template,hand_authored_template,5febf42c419b|interstate-linehaul-driver,Interstate Linehaul Driver - Full Time,truck-driver,senior,unknown,mid,truck-driver,mid,unknown,mid
+syn:76bd692bf5ea,test,synthetic_template,hand_authored_template,d384280c3f9a|junior-administrative-assistant,Junior Administrative Assistant | Immediate Start,admin,junior,admin,junior,legal,junior,admin,junior
+amb:36a23d19e24e,test,ambiguous_mixed,hand_authored_template,f355279aecb8|operations-specialist,Operations Specialist - Global Team,warehouse,mid,warehouse,mid,warehouse,mid,warehouse,mid
+syn:5529a3a64b39,test,synthetic_template,hand_authored_template,7a89e09d22a6|security-officer,Security Officer | Immediate Start,security-officer,mid,security-officer,mid,security-officer,junior,security-officer,mid
+syn:16ffc61518a1,test,synthetic_template,hand_authored_template,8ac8b179d819|licensed-electrician,Licensed Electrician - Full Time,electrician,mid,electrician,mid,electrician,junior,electrician,mid
+syn:863ff5e79915,test,synthetic_template,hand_authored_template,140e721fc319|hr-assistant,HR Assistant (Remote),hr,junior,unknown,junior,hr,junior,unknown,junior
+syn:4f0af86d53b3,test,synthetic_template,hand_authored_template,41e09ae82039|site-construction-supervisor,Site Construction Supervisor | Immediate Start,construction,senior,construction,mid,security-officer,senior,construction,mid
+syn:c234ca0b6964,test,synthetic_template,hand_authored_template,a7ea288816b7|retail-store-manager,Retail Store Manager - Full Time,retail,senior,retail,senior,retail,mid,retail,mid
+syn:68ae2635477e,test,synthetic_template,hand_authored_template,d384280c3f9a|junior-administrative-assistant,Junior Administrative Assistant - Full Time,admin,junior,admin,junior,legal,junior,admin,junior
+syn:61a0505775fb,test,synthetic_template,hand_authored_template,f0eba3e4b927|frontend-developer,Frontend Developer (Remote),software-engineer,mid,software-engineer,mid,software-engineer,mid,software-engineer,mid
+syn:574a321441ee,test,synthetic_template,hand_authored_template,9adf041feffa|graduate-radiographer,Graduate Radiographer | Immediate Start,healthcare-allied,junior,healthcare-allied,junior,aged-care,mid,healthcare-allied,junior
+syn:370e811d6830,test,synthetic_template,hand_authored_template,140e721fc319|hr-assistant,HR Assistant - Full Time,hr,junior,unknown,junior,hr,junior,unknown,junior
+amb:8f7dfa8aafba,test,ambiguous_mixed,hand_authored_template,ee824896c7d5|assistant-to-senior-director,Assistant to Senior Director (Hybrid),admin,junior,unknown,senior,admin,senior,unknown,senior
+amb:dbe66c2f11f1,test,ambiguous_mixed,hand_authored_template,5e68beba74e3|data-analyst---analytics-engineer,Data Analyst / Analytics Engineer - Global Team,data-analyst,mid,data-engineer,mid,data-analyst,senior,data-engineer,mid
+syn:10c1011c52d7,test,synthetic_template,hand_authored_template,87c10f6a3abe|lead-analytics-specialist,Lead Analytics Specialist - Full Time,data-analyst,senior,data-analyst,senior,data-analyst,senior,data-analyst,senior
+amb:8db91807092a,test,ambiguous_mixed,hand_authored_template,f355279aecb8|operations-specialist,Operations Specialist - Global Team,customer-service,mid,unknown,mid,customer-service,mid,unknown,mid
+amb:87ba9e40c7e9,test,ambiguous_mixed,hand_authored_template,e7c2b091b624|associate,Associate (Hybrid),accountant,junior,unknown,mid,accountant,senior,unknown,mid
+syn:88524a3fad77,test,synthetic_template,hand_authored_template,d375e691487f|senior-data-engineer,Senior Data Engineer,data-engineer,senior,data-engineer,senior,data-analyst,senior,data-engineer,senior
+amb:58cb6ebbfac3,test,ambiguous_mixed,hand_authored_template,f355279aecb8|operations-specialist,Operations Specialist,warehouse,mid,warehouse,mid,warehouse,senior,warehouse,mid
+syn:b3ae6c04f5f2,test,synthetic_template,hand_authored_template,f0eba3e4b927|frontend-developer,Frontend Developer,software-engineer,mid,software-engineer,mid,software-engineer,mid,software-engineer,mid
+syn:486c5487c366,test,synthetic_template,hand_authored_template,87c10f6a3abe|lead-analytics-specialist,Lead Analytics Specialist | Immediate Start,data-analyst,senior,data-analyst,senior,data-analyst,senior,data-analyst,senior
+syn:8102886b6b0f,test,synthetic_template,hand_authored_template,c7a78a150afc|junior-business-analyst,Junior Business Analyst | Immediate Start,business-analyst,junior,business-analyst,junior,business-analyst,junior,business-analyst,junior
+syn:2b4ad600f0e3,test,synthetic_template,hand_authored_template,c7a78a150afc|junior-business-analyst,Junior Business Analyst,business-analyst,junior,business-analyst,junior,business-analyst,junior,business-analyst,junior
+syn:32cca0d338b3,test,synthetic_template,hand_authored_template,40370eff5aeb|warehouse-storeperson,Warehouse Storeperson - Full Time,warehouse,mid,warehouse,mid,warehouse,junior,warehouse,mid
+syn:bb95557f8944,test,synthetic_template,hand_authored_template,53b9741cff87|head-chef,Head Chef,chef,senior,chef,mid,chef,senior,chef,mid
+amb:178993698b27,test,ambiguous_mixed,hand_authored_template,8ea07ec80bcf|client-advisor,Client Advisor,sales,mid,sales,mid,sales,mid,sales,mid
+syn:10c06d055723,test,synthetic_template,hand_authored_template,d375e691487f|senior-data-engineer,Senior Data Engineer - Full Time,data-engineer,senior,data-engineer,senior,data-analyst,senior,data-engineer,senior
+amb:4bdaa5773c63,test,ambiguous_mixed,hand_authored_template,8ea07ec80bcf|client-advisor,Client Advisor (Hybrid),sales,mid,sales,mid,sales,mid,sales,mid
+syn:b60ef3dd8121,test,synthetic_template,hand_authored_template,32cad679627e|university-lecturer-in-statistics,University Lecturer in Statistics | Immediate Start,teacher,senior,teacher,mid,data-scientist,mid,teacher,mid

@@ -190,6 +190,47 @@ export type SourceHealth = {
   schema_drift: boolean;
 };
 
+export type CollectionTrendPoint = { date: string; new_jobs: number };
+
+export type CollectionSourceRow = {
+  source: string;
+  internal_total: number;
+  public_total: number;
+  today_new_bj: number;
+  seven_day_new_bj: number;
+  last_ingest_at: string | null;
+  last_run_status: string | null;
+  last_run_at: string | null;
+};
+
+export type CollectionLocalUploadRow = {
+  source: string;
+  today_accepted_bj: number;
+  today_duplicate_bj: number;
+  today_rejected_bj: number;
+  last_batch_id: number | null;
+  last_batch_status: string | null;
+  last_batch_accepted: number | null;
+  last_batch_duplicate: number | null;
+  last_batch_rejected: number | null;
+  last_batch_completed_at: string | null;
+  collector_state: "online" | "stale" | "offline" | "none";
+  collector_last_seen_at: string | null;
+};
+
+export type CollectionOverview = {
+  generated_at: string;
+  daily_target_per_source: number;
+  sources: CollectionSourceRow[];
+  local_uploads: CollectionLocalUploadRow[];
+  seven_day_trend: CollectionTrendPoint[];
+  trend_scope: string;
+};
+
+export function getCollectionOverview(): Promise<CollectionOverview> {
+  return getJson<CollectionOverview>("/api/v1/collection/overview");
+}
+
 export function getBoards(params: { provider?: string; enabled?: boolean; q?: string } = {}): Promise<Board[]> {
   const search = new URLSearchParams();
   if (params.provider) search.set("provider", params.provider);
@@ -376,8 +417,17 @@ export type MatchResult = {
 export type MatchResponse = {
   engine: string;
   reranked: boolean;
+  data_scope?: "public_jobs" | "illustrative_examples";
   results: MatchResult[];
 };
+
+export type Methodology = {
+  available:boolean;message?:string;dataset_sha256?:string;corpus_scope?:string;
+  human_ground_truth_present?:boolean;train_count?:number;test_count?:number;seed?:number;
+  generalisation_status?:string;
+  strategies?:{name:string;occupation_macro_f1:number;seniority_macro_f1:number;overall_macro_f1:number}[];
+};
+export function getMethodology():Promise<Methodology> {return getJson<Methodology>("/api/v1/methodology");}
 
 export type SavedSearchRunResult = {
   saved_search_id: number;

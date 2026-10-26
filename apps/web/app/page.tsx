@@ -94,9 +94,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Sea
 
       {error ? (
         <div className="notice">
-          无法连接 API（{error}）。请确认 FastAPI 服务已启动，并且
-          <code> API_BASE_URL </code>
-          指向正确。
+          数据服务暂时不可用，请稍后刷新。<Link href="/status">查看运行状态</Link>
         </div>
       ) : null}
 
@@ -121,7 +119,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Sea
             <>
               <p>目前没有获准公开展示的职位。</p>
               <p>扩展采集的数据保存在私有采集库，公开搜索不会显示这些记录。</p>
-              <Link href={`/admin/imports${values.q ? `?q=${encodeURIComponent(values.q)}` : ""}`}>搜索采集数据库</Link>
+              <Link href="/collection">查看真实采集统计</Link>{" · "}<Link href="/demo/match">体验匿名匹配示例</Link>{" · "}<Link href="/methodology">查看方法与实验</Link>
             </>
           ) : (
             <p>没有符合当前搜索条件的公开职位。</p>

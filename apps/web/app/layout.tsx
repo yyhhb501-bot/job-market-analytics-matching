@@ -23,9 +23,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <nav className="site-nav">
               <Link href="/">搜索</Link>
               <Link href="/compare">地区对比</Link>
+              <Link href="/demo/match">匹配演示 · 免注册</Link>
               <Link href="/match">简历匹配</Link>
               <Link href="/alerts">告警</Link>
               <Link href="/boards">公司看板</Link>
+              <Link href="/collection">采集看板</Link>
+              <Link href="/methodology">方法与实验</Link>
               <Link href="/status">运行状态</Link>
               <Link href="/admin/imports">采集数据库</Link>
               <Link href="/login">会员登录</Link>

@@ -142,6 +142,16 @@ def classify_seniority(title: str | None, use_ml: bool = True) -> str | None:
     if not use_ml:
         return baseline_match
 
+    # Explicit role-level prefixes must not be overturned by an uncertain model
+    # trained on a small demonstration corpus. Ambiguous titles still use ML.
+    if _normalise(title).startswith(("senior ", "lead ", "head ", "chief ", "principal ",
+                                    "junior ", "graduate ", "intern ")):
+        return baseline_match
+    if baseline_match == "mid":
+        # A generic title has no evidence of a junior/senior level; do not infer
+        # seniority from the occupation's correlations in a tiny template corpus.
+        return baseline_match
+
     try:
         from packages.enrichment.classifier import get_classifier
         clf = get_classifier()

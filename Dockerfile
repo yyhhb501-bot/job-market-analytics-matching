@@ -1,5 +1,5 @@
 # Multi-stage build: compile wheels with build tools, run on a slim non-root image.
-# Python 3.12: python-jobspy pins numpy==1.26.3 which has no 3.13 wheels.
+# Python 3.12 matches the tested runtime and CI contract.
 FROM python:3.12-slim AS builder
 
 ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1

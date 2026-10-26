@@ -135,7 +135,8 @@ test.describe("Collector Dashboard Component", () => {
     await expect(page.getByTestId("status-linkedin")).toHaveText("等待中");
     await expect(page.getByTestId("metric-collected-linkedin")).toHaveText("120");
     await expect(page.getByTestId("daily-goal-linkedin")).toContainText("17 / 200");
-    await expect(page.getByTestId("daily-goal-seek")).toContainText("200 条");
+    // Missing extension target uses the configured 600/day fallback.
+    await expect(page.getByTestId("daily-goal-seek")).toContainText("600 条");
     await expect(page.getByTestId("metric-pending-linkedin")).toHaveText("5");
     await expect(page.getByTestId("metric-synced-linkedin")).toHaveText("115");
     await expect(page.getByTestId("time-next-linkedin")).toContainText("北京时间");

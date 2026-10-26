@@ -120,11 +120,12 @@ def rate_limit(scope: str):
         settings = get_settings()
         if not settings.rate_limit_enabled:
             return
-        limit = (
-            settings.match_rate_limit_per_minute
-            if scope == "match"
-            else settings.rate_limit_per_minute
-        )
+        if scope == "match":
+            limit = settings.match_rate_limit_per_minute
+        elif scope == "demo_match":
+            limit = settings.demo_match_rate_limit_per_minute
+        else:
+            limit = settings.rate_limit_per_minute
         client = request.client.host if request.client else "anonymous"
         if not _get_limiter(scope, limit, settings).allow(client):
             raise HTTPException(

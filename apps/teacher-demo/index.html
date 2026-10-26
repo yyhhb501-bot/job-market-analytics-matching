@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>Job Atlas · 招聘数据项目</title><link rel="stylesheet" href="demo.css"><script src="demo.js" defer></script></head>
+<body>
+<header><a class="brand" href="#top">JA<span>Job Atlas</span></a><nav aria-label="主导航"><a href="#collection">采集数据</a><a href="#match">匹配演示</a><a href="#methods">实验方法</a><a href="https://github.com/yyhhb501-bot/job-market-analytics-matching">GitHub ↗</a></nav></header>
+<main id="top">
+<section class="hero"><p class="eyebrow">US + AU · DATA ENGINEERING PROJECT</p><h1>从分散的招聘信息，<br>到可核对的数据。</h1><p class="intro">一个招聘聚合与简历匹配项目。这里展示真实数据库的汇总快照、浏览器采集的历史入库回执，以及可以亲手尝试的匹配示例。</p><div class="actions"><a class="primary" href="#collection">查看采集情况 ↓</a><a href="#match">试试匹配演示 →</a></div><p class="snapshot" id="snapshot-time">正在载入快照…</p></section>
+<div id="load-error" role="alert" hidden>快照加载失败。请刷新页面，或从 GitHub 查看代码与实验文件。</div>
+<section id="collection"><div class="section-head"><div><p class="eyebrow">01 / COLLECTION</p><h2>采集与入库</h2></div><span class="tag">历史快照 · 非实时监控</span></div>
+<div class="metrics" id="metrics"></div><p class="note">“库内记录”是数据库中现有记录数，包含历史导入，不代表最近爬取量、仍有效职位或公开再分发许可。今日与近七日均按北京时间计算。此页面不连接本机采集器，也不启动爬虫。</p>
+<h3>各来源数据</h3><div class="table-wrap"><table><thead><tr><th>来源</th><th>库内记录</th><th>可公开详情</th><th>今日新入库</th><th>近七日新入库</th><th>最近首次入库</th></tr></thead><tbody id="sources"></tbody></table></div>
+<h3>LinkedIn 与 SEEK 的真实回执</h3><p class="note">600 条/日是每个平台的目标；最多 50 次详情/小时，09:00–23:00，遇人工验证暂停。下列时间和计数来自服务器保存的入库回执，不代表当前浏览器正在运行。</p><div class="uploads" id="uploads"></div>
+<h3>近七日首次入库</h3><div id="trend" class="trend"></div><p class="note">没有记录的日期显示 0；重复上传不会计为首次入库。私有职位正文、设备令牌和个人信息没有导出到本站。</p></section>
+<section id="match"><div class="section-head"><div><p class="eyebrow">02 / INTERACTIVE EXAMPLE</p><h2>试一段简历，看看匹配依据</h2></div><span class="tag">6 个虚构职位</span></div><p>这个静态演示按英文词项的余弦相似度排序，展示“为什么匹配”。文字仅在你的浏览器中计算，不上传。它不运行服务端完整匹配引擎，也不访问真实招聘职位。</p>
+<div class="sample-buttons"><button type="button" id="sample-data">数据分析示例</button><button type="button" id="sample-nurse">注册护士示例</button></div><form id="match-form"><label for="resume">简历或技能文本（建议英文，最多 8,000 字符）</label><textarea id="resume" maxlength="8000" rows="5" required>Data Analyst with Python SQL pandas Tableau statistics dashboards and business analysis experience.</textarea><div class="form-row"><label for="country">地区 <select id="country"><option value="">全部</option><option value="US">美国</option><option value="AU">澳洲</option></select></label><button class="primary" type="submit">计算示例匹配 →</button></div></form><p id="match-status" role="status" aria-live="polite"></p><div id="results" class="results"></div></section>
+<section id="methods"><div class="section-head"><div><p class="eyebrow">03 / METHODS & EVIDENCE</p><h2>方法、结果与边界</h2></div><span class="tag">可复现实验</span></div>
+<div class="pipeline"><div><b>01</b><h3>采集</h3><p>官方 API / ATS 适配器与浏览器本地扩展；保留检查点、限制访问频率。</p></div><div><b>02</b><h3>整理</h3><p>统一字段、去重、记录来源与时间；公开展示需要来源授权。</p></div><div><b>03</b><h3>分析</h3><p>TF-IDF + Linear SVM 分类；完整应用提供哈希向量余弦、关键词和时效加权匹配。</p></div><div><b>04</b><h3>服务</h3><p>FastAPI + PostgreSQL + Redis / Celery + Next.js，Docker Compose 部署。</p></div></div>
+<h3>分类实验的实际结果</h3><p class="note">下面是合成模板语料的分组留出测试，不是人工标注的真实招聘测试集。TF-IDF 仅拟合训练集；同模板、同职位与跨来源重复归入同一分组。不能据此宣称真实世界 F1 提升至 0.84。</p><p id="experiment-meta"></p><div class="table-wrap"><table><thead><tr><th>策略</th><th>职业 Macro-F1</th><th>资历 Macro-F1</th><th>两项均值</th></tr></thead><tbody id="strategies"></tbody></table></div><p id="dataset-hash" class="hash"></p><details><summary>如何核对与复现</summary><p>源代码、测试、训练脚本和指标产物均在 GitHub。默认训练只使用公开的合成模板，不读取私有数据库。</p><pre>uv sync --frozen --extra dev
+uv run python -m scripts.train_and_eval_classifier
+uv run pytest -q</pre><p>全栈本地启动与部署步骤见仓库 README。GitHub Pages 仅托管本页静态快照；真实全栈服务需要独立运行的服务器，本站不声称已完成公网全栈部署。</p><a href="https://github.com/yyhhb501-bot/job-market-analytics-matching/tree/master/artifacts/classification_eval">查看实验产物 ↗</a></details>
+</section></main><footer><span>Job Atlas / Project showcase</span><a href="snapshot.json" download>下载汇总快照 JSON ↓</a><a href="https://github.com/yyhhb501-bot/job-market-analytics-matching">查看完整代码 ↗</a></footer>
+</body></html>

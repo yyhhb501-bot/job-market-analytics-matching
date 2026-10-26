@@ -77,6 +77,9 @@ class OpenAIEmbedder:
         self.api_key = api_key
         self.model = model
         self.base_url = base_url.rstrip("/")
+        # A provider label or vector dimension cannot identify a vector space.
+        identity = f"{self.base_url}|{self.model}"
+        self.name = "openai:" + hashlib.sha256(identity.encode()).hexdigest()[:32]
         self.timeout = timeout
 
     async def embed(self, texts: Sequence[str]) -> list[list[float]]:

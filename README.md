@@ -1,5 +1,29 @@
 # Job Aggregator (US + Australia)
 
+## 在线展示 / Teacher demo
+
+**[打开项目展示网站](https://yyhhb501-bot.github.io/job-market-analytics-matching/)**
+
+无需登录，可查看数据库汇总快照、LinkedIn / SEEK 的历史入库回执、互动匹配示例及真实计算的分类实验结果。GitHub Pages 托管静态展示，页面注明快照时间；本地采集继续运行时，网页不会自动更新。库内总数包含历史导入，不能视为当天爬取成果。未授权公开的职位正文不会发布。
+
+互动示例仅在浏览器里对 6 个虚构职位计算英文词项余弦，不上传输入；完整 Next.js / FastAPI 应用另提供哈希向量、关键词、标题与时效的组合匹配。两者的算法范围在各自页面明确标注。
+
+**简历结论边界：**项目具备多源整理、分类、搜索及匹配实现，但当前分组留出实验只有合成模板，没有人工标注的真实测试集，不能支持“Macro-F1 从 0.68 提升到 0.84”。请参考 [实际评估报告](docs/CLASSIFICATION_EVALUATION.md) 与 [本次验收记录](docs/RELEASE_20261026.md)。
+
+### 运行完整网站
+
+按下文 Docker 步骤启动后，`/collection`、`/demo/match` 和 `/methodology` 可匿名浏览；管理与写操作仍需登录。生产全栈服务需要独立服务器和 HTTPS 域名，不能用 GitHub Pages 代替。当前没有将本机开发端口公开到互联网。
+
+### 更新展示快照
+
+```bash
+uv run python -m scripts.build_teacher_demo --api-url http://localhost:8010
+```
+
+输出 `out/teacher-demo/`，只导出字段白名单中的汇总和合成示例，不导出职位正文、设备身份、令牌或简历。将该目录发布到 Pages 的 `codex/teacher-demo` 分支后更新网页。应保留快照时间，不能声称实时采集。
+
+匿名匹配 API 默认每分钟 5 次；经 Next 代理访问时共享代理的保守额度，服务器不信任任意转发 IP。多实例部署应使用 Redis 限流。
+
 A job aggregation platform focused on the **United States** and **Australia**.
 It collects from public ATS boards and official APIs first, adds aggregator and
 local-market sources behind opt-in switches, normalises everything into one

@@ -6,13 +6,13 @@ const ts=require('typescript');
 function handler(identity,fetcher,environment={}) {
   const output=ts.transpileModule(fs.readFileSync(__dirname+'/../app/api/collector/setup/route.ts','utf8'),
     {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-  const module={exports:{}};
-  const context={exports:module.exports,URL,AbortSignal,process:{env:{API_KEY:'server-only-secret',...environment}},
+  const compiledModule={exports:{}};
+  const context={exports:compiledModule.exports,URL,AbortSignal,process:{env:{API_KEY:'server-only-secret',...environment}},
     fetch:fetcher || (async()=>({ok:true,json:async()=>({token:'jagg_device_token'})})),
     require:name=>name==='next/headers'?{cookies:async()=>({get:()=>({value:'signed'})})}:
       name==='next/server'?{NextResponse:{json:(body,options={})=>({body,status:options.status || 200,headers:options.headers})}}:
       {SESSION_COOKIE:'jagg_session',readSessionToken:async()=>identity,sameOrigin:r=>r.headers.get('origin')==='http://localhost:3000'}};
-  vm.runInNewContext(output,context);return module.exports.POST;
+  vm.runInNewContext(output,context);return compiledModule.exports.POST;
 }
 const request=(platform='linkedin',origin='http://localhost:3000')=>new Request('http://localhost:3000/api/collector/setup',
   {method:'POST',headers:{origin,host:'localhost:3000','Content-Type':'application/json'},body:JSON.stringify({platform})});

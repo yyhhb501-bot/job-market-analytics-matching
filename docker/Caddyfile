@@ -7,11 +7,13 @@
 {$PUBLIC_DOMAIN} {
 	encode gzip zstd
 
-	# API surface (search, import gateway, docs, health, metrics).
-	handle /api/* {
+	# Only versioned FastAPI routes go to the backend. Unversioned /api/login,
+	# /api/proxy, /api/demo-match and /api/collector belong to Next.js.
+	handle /api/v1/* {
 		reverse_proxy api:8000
 	}
-	handle /health {
+	@health path /health /livez /readyz
+	handle @health {
 		reverse_proxy api:8000
 	}
 	# Scrape endpoint: restrict at the network/firewall layer in production.
